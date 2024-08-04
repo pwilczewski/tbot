@@ -1,9 +1,10 @@
-import { NextApiRequest, NextApiResponse } from "next";
+
 import { BotError } from "grammy";
 import { startTelegramBotInDev } from "@/app/start";
-// import cors from "cors";
+import { NextRequest, NextResponse } from "next/server";
 
-export const POST = async (req: NextApiRequest, res: NextApiResponse) => {
+/*
+export const POST = async (req: NextRequest, res: NextResponse) => {
   try {
     if (process.env.NODE_ENV === "development" && req.query?.action !== "start") {
       return res.status(500).send({ error: { message: "Wrong gateway." } });
@@ -20,6 +21,7 @@ export const POST = async (req: NextApiRequest, res: NextApiResponse) => {
     }
   }
 };
+*/
 
 
 // this is to test the bot locally by visiting http://localhost:3000/api/telegram-dev?action=start
