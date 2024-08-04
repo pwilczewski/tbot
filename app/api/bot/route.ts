@@ -11,8 +11,6 @@ export const POST = async (req: NextRequest) => {
     await ctx.reply("...");
   });
 
-  console.log("test")
-
   const handleUpdate = webhookCallback(bot, "std/http");
 
   return handleUpdate(req);
