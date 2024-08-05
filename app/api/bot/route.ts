@@ -27,7 +27,8 @@ export const POST = async (req: NextRequest) => {
       });
 
     // await bot.api.sendMessage(chatId, resp.choices[0].text);
-    await bot.api.sendMessage(chatId, message)
+    // await bot.api.sendMessage(chatId, message)
+    await ctx.reply("...");
   });
 
 
