@@ -26,7 +26,8 @@ export const POST = async (req: NextRequest) => {
         temperature: 0,
       });
 
-    await bot.api.sendMessage(chatId, resp.choices[0].text);
+    // await bot.api.sendMessage(chatId, resp.choices[0].text);
+    await bot.api.sendMessage(chatId, message)
   });
 
 
