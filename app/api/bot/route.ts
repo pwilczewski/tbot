@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Bot, webhookCallback } from "grammy";
-
-const token = process.env.TELEGRAM_BOT_TOKEN as string
-
-// add an openai call here
-
 import OpenAI from 'openai';
 
+const token = process.env.TELEGRAM_BOT_TOKEN as string
 
 export const POST = async (req: NextRequest) => {
 
@@ -22,11 +18,7 @@ export const POST = async (req: NextRequest) => {
         messages: [{ role: 'user', content: message }]
     });
     await bot.api.sendMessage(chatId, resp.choices[0].message.content as string);
-    // await bot.api.sendMessage(chatId, message)
-    // await ctx.reply("...");
   });
-
-
 
   const handleUpdate = webhookCallback(bot, "std/http");
 
