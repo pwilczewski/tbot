@@ -8,7 +8,6 @@ const token = process.env.TELEGRAM_BOT_TOKEN as string
 import OpenAI from 'openai';
 
 
-
 export const POST = async (req: NextRequest) => {
 
   const bot = new Bot(token)
@@ -20,12 +19,11 @@ export const POST = async (req: NextRequest) => {
     const chatId = ctx.chatId;
 
     const resp = await openai.completions.create({
-        model: 'text-davinci-002',
+        model: 'gpt-4o-mini',
         prompt: message,
         max_tokens: 50,
         temperature: 0,
       });
-
     // await bot.api.sendMessage(chatId, resp.choices[0].text);
     // await bot.api.sendMessage(chatId, message)
     await ctx.reply("...");
