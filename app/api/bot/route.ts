@@ -18,8 +18,10 @@ export const POST = async (req: NextRequest) => {
     const message = ctx.message.text as string;
     const chatId = ctx.chatId;
 
-    const resp = await openai.completions.create({model: 'gpt-3.5-turbo', prompt: message, max_tokens: 50,temperature: 0,});
-    await bot.api.sendMessage(chatId, resp.choices[0].text);
+    const resp = await openai.chat.completions.create({model: 'gpt-4o-mini', 
+        messages: [{ role: 'user', content: message }]
+    });
+    await bot.api.sendMessage(chatId, resp.choices[0].message.content as string);
     // await bot.api.sendMessage(chatId, message)
     // await ctx.reply("...");
   });
