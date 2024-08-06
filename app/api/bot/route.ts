@@ -11,19 +11,14 @@ import OpenAI from 'openai';
 export const POST = async (req: NextRequest) => {
 
   const bot = new Bot(token)
-  const openai = new OpenAI();
+  // const openai = new OpenAI();
 
   bot.on("message", async (ctx) => {
     // await ctx.reply("...");
     const message = ctx.message.text as string;
     const chatId = ctx.chatId;
 
-    const resp = await openai.completions.create({
-        model: 'gpt-4o-mini',
-        prompt: message,
-        max_tokens: 50,
-        temperature: 0,
-      });
+    // const resp = await openai.completions.create({model: 'gpt-4o-mini', prompt: message, max_tokens: 50,temperature: 0,});
     // await bot.api.sendMessage(chatId, resp.choices[0].text);
     // await bot.api.sendMessage(chatId, message)
     await ctx.reply("...");
