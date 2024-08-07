@@ -1,4 +1,3 @@
-import { NextRequest, NextResponse } from "next/server";
 import { Bot, webhookCallback } from "grammy";
 import OpenAI from 'openai';
 
@@ -15,6 +14,11 @@ bot.on("message", async (ctx) => {
       messages: [{ role: 'user', content: message }]
   });
   await bot.api.sendMessage(chatId, resp.choices[0].message.content as string);
+});
+
+bot.command("train", async (ctx) => {
+  const chatId = ctx.chatId;
+  await bot.api.sendMessage(chatId, "Training mode enabled")
 });
 
 export const POST = webhookCallback(bot, "std/http");
