@@ -1,14 +1,19 @@
 import { Bot, webhookCallback } from "grammy";
 import OpenAI from 'openai';
+import { limit } from "@grammyjs/ratelimiter";
 
-const token = process.env.TELEGRAM_BOT_TOKEN as string
-const bot = new Bot(token)
+const token = process.env.TELEGRAM_BOT_TOKEN as string;
+const bot = new Bot(token);
 const openai = new OpenAI();
+
+// ratelimiter
+bot.use(limit());
 
 bot.command("start", 
   async (ctx) => {
     const user = await ctx.getAuthor();
     const chatId = ctx.chatId
+    console.log(user);
     if ( user.status === "creator" || user.status === "administrator") {
       await bot.api.sendMessage(chatId, "Creator start")
     } else {
