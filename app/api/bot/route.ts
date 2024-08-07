@@ -5,6 +5,11 @@ const token = process.env.TELEGRAM_BOT_TOKEN as string
 const bot = new Bot(token)
 const openai = new OpenAI();
 
+bot.command("train", async (ctx) => {
+  const chatId = ctx.chatId;
+  await bot.api.sendMessage(chatId, "Training mode enabled")
+});
+
 bot.on("message", async (ctx) => {
   // await ctx.reply("...");
   const message = ctx.message.text as string;
@@ -14,11 +19,6 @@ bot.on("message", async (ctx) => {
       messages: [{ role: 'user', content: message }]
   });
   await bot.api.sendMessage(chatId, resp.choices[0].message.content as string);
-});
-
-bot.command("train", async (ctx) => {
-  const chatId = ctx.chatId;
-  await bot.api.sendMessage(chatId, "Training mode enabled")
 });
 
 export const POST = webhookCallback(bot, "std/http");
