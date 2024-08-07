@@ -3,9 +3,25 @@ import { Bot, webhookCallback } from "grammy";
 import OpenAI from 'openai';
 
 const token = process.env.TELEGRAM_BOT_TOKEN as string
+const bot = new Bot(token)
+const openai = new OpenAI();
 
+bot.on("message", async (ctx) => {
+  // await ctx.reply("...");
+  const message = ctx.message.text as string;
+  const chatId = ctx.chatId;
+
+  const resp = await openai.chat.completions.create({model: 'gpt-4o-mini', 
+      messages: [{ role: 'user', content: message }]
+  });
+  await bot.api.sendMessage(chatId, resp.choices[0].message.content as string);
+});
+
+export const POST = webhookCallback(bot, "std/http");
+
+/*
 export const POST = async (req: NextRequest) => {
-
+  const token = process.env.TELEGRAM_BOT_TOKEN as string
   const bot = new Bot(token)
   const openai = new OpenAI();
 
@@ -19,11 +35,10 @@ export const POST = async (req: NextRequest) => {
     });
     await bot.api.sendMessage(chatId, resp.choices[0].message.content as string);
   });
-
   const handleUpdate = webhookCallback(bot, "std/http");
-
   return handleUpdate(req);
 };
+*/
 
 
 // curl https://api.telegram.org/bot<telegram_bot_token>/setWebhook?url=https://<your-deployment.vercel>.app/api/bot
