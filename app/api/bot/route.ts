@@ -8,6 +8,8 @@ const openai = new OpenAI();
 bot.command("train", async (ctx) => {
   const chatId = ctx.chatId;
   await bot.api.sendMessage(chatId, "Training mode enabled")
+  await bot.api.sendMessage(chatId, "Retrieving questions")
+  // go to supabase and get a question
 });
 
 bot.on("message", async (ctx) => {
