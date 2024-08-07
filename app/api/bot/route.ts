@@ -5,11 +5,15 @@ const token = process.env.TELEGRAM_BOT_TOKEN as string
 const bot = new Bot(token)
 const openai = new OpenAI();
 
-// maybe customize context later if it's needed
-
-bot.command("start", async (ctx, next) => {
-  const chatId = ctx.chatId
-  await bot.api.sendMessage(chatId, "Test start")
+bot.command("start", 
+  async (ctx) => {
+    const user = await ctx.getAuthor();
+    const chatId = ctx.chatId
+    if ( user.status === "creator" || user.status === "administrator") {
+      await bot.api.sendMessage(chatId, "Creator start")
+    } else {
+      await bot.api.sendMessage(chatId, "Other start")
+    }
 });
 
 bot.command("train", async (ctx) => {
