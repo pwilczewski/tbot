@@ -1,4 +1,4 @@
-import { Bot, webhookCallback } from "grammy";
+import { Bot, Context, NextFunction, webhookCallback } from "grammy";
 import OpenAI from 'openai';
 import { limit } from "@grammyjs/ratelimiter";
 
@@ -8,6 +8,20 @@ const openai = new OpenAI();
 
 // ratelimiter
 bot.use(limit());
+
+// middleware example - logs reponse time to console
+async function responseTime(
+  ctx: Context,
+  next: NextFunction, // is an alias for: () => Promise<void>
+): Promise<void> {
+  const before = Date.now();
+  // invoke downstream middleware
+  await next(); // make sure to `await`!
+  const after = Date.now();
+  console.log(`Response time: ${after - before} ms`);
+}
+
+bot.use(responseTime);
 
 bot.command("start", 
   async (ctx) => {
