@@ -27,7 +27,7 @@ bot.command("start",
   async (ctx) => {
     const user = await ctx.getAuthor();
     const chatId = ctx.chatId
-    console.log(user);
+    console.log(user.status);
     if ( user.status === "creator" || user.status === "administrator") {
       await bot.api.sendMessage(chatId, "Creator start")
     } else {
