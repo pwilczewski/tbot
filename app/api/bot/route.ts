@@ -9,6 +9,7 @@ const openai = new OpenAI();
 // ratelimiter
 bot.use(limit());
 
+/*
 // middleware example - logs reponse time to console
 async function responseTime(
   ctx: Context,
@@ -22,13 +23,14 @@ async function responseTime(
 }
 
 bot.use(responseTime);
+*/
 
 bot.command("start", 
   async (ctx) => {
     const user = await ctx.getAuthor();
-    const chatId = ctx.chatId
-    console.log(user.status);
-    if ( user.status === "creator" || user.status === "administrator") {
+    const chatId = ctx.chatId;
+    console.log(user.user)
+    if ( user.user.first_name === "Paul" ) {
       await bot.api.sendMessage(chatId, "Creator start")
     } else {
       await bot.api.sendMessage(chatId, "Other start")
