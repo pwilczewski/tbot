@@ -30,7 +30,6 @@ bot.command("start",
   async (ctx) => {
     const user = await ctx.getAuthor();
     const chatId = ctx.chatId;
-    console.log(user.user)
     if ( user.user.id === 5013727719 ) {
       await bot.api.sendMessage(chatId, "Creator start")
     } else {
@@ -42,7 +41,7 @@ bot.command("train", async (ctx) => {
   const chatId = ctx.chatId;
   await bot.api.sendMessage(chatId, "Training mode enabled")
   await bot.api.sendMessage(chatId, "Retrieving questions")
-  const question = await prismadb.basedQuestions.findFirst()
+  const question = await prismadb.basedQuestions.findFirst({select: {question: true}})
   console.log(question)
   /*
   if (question!==null) {
