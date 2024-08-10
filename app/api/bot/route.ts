@@ -42,7 +42,11 @@ bot.command("train", async (ctx) => {
   await bot.api.sendMessage(chatId, "Training mode enabled")
   await bot.api.sendMessage(chatId, "Retrieving questions")
   const question = await prismadb.basedQuestions.findFirst({select: {question: true}})
-  console.log(question)
+  if (question !== null) {
+    await bot.api.sendMessage(chatId, question.question as string)
+  } else {
+    await bot.api.sendMessage(chatId, "No further questions")
+  }
   /*
   if (question!==null) {
     await bot.api.sendMessage(chatId, question.question as string);
