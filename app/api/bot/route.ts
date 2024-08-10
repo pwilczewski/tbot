@@ -1,6 +1,7 @@
 import { Bot, Context, NextFunction, webhookCallback } from "grammy";
 import OpenAI from 'openai';
 import { limit } from "@grammyjs/ratelimiter";
+import prismadb from "@/lib/prismadb";
 
 const token = process.env.TELEGRAM_BOT_TOKEN as string;
 const bot = new Bot(token);
@@ -30,7 +31,7 @@ bot.command("start",
     const user = await ctx.getAuthor();
     const chatId = ctx.chatId;
     console.log(user.user)
-    if ( user.user.first_name === "Paul" ) {
+    if ( user.user.id === 5013727719 ) {
       await bot.api.sendMessage(chatId, "Creator start")
     } else {
       await bot.api.sendMessage(chatId, "Other start")
@@ -41,6 +42,8 @@ bot.command("train", async (ctx) => {
   const chatId = ctx.chatId;
   await bot.api.sendMessage(chatId, "Training mode enabled")
   await bot.api.sendMessage(chatId, "Retrieving questions")
+  const question = await prismadb.basedQuestions.findFirst()
+  await bot.api.sendMessage(chatId, question);
   // go to supabase and get a question
 });
 
