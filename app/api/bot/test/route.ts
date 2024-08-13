@@ -37,7 +37,7 @@ export async function POST (req: Request) {
 
   const handleUpdate = webhookCallback(bot, "std/http")
 
-  return handleUpdate;
+  return handleUpdate(req);
 };
 
 // curl https://api.telegram.org/bot<telegram_bot_token>/setWebhook?url=https://<your-deployment.vercel>.app/api/bot
