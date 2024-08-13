@@ -15,7 +15,7 @@ const openai = new OpenAI();
 
 export const POST = async (req: NextRequest) => {
 
-  console.log(req.nextUrl)
+  console.log(req.url)
 
   // get token
   const token = process.env.TELEGRAM_BOT_TOKEN as string;
