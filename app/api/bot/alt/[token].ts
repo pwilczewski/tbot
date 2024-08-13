@@ -14,8 +14,6 @@ const openai = new OpenAI();
 
 export const POST = async (req: NextApiRequest) => {
 
-  console.log(req.query)
-
   // request comes in with BOT_TOKEN
   const { token } = req.query;
   const bot = new Bot(token as string);
