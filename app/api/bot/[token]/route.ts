@@ -5,8 +5,6 @@ import prismadb from "@/lib/prismadb";
 import { userStatus } from "@prisma/client";
 import { NextRequest } from "next/server";
 
-// all interactions need to be BOT_TOKEN / user pairs
-
 const openai = new OpenAI();
 
 export const POST = async (req: NextRequest) => {
@@ -14,18 +12,15 @@ export const POST = async (req: NextRequest) => {
   // parse url to get BOT_TOKEN
   const token = req.nextUrl.href.match(/([^\/]+)$/)?.[0];
   const bot = new Bot(token as string);
+  let cuserStatus: userStatus | null;
   
   bot.use(limit());
   
-  // set the global status, but I still need bot/user pairs...
   // user.user.username is not required, but id is required hmm...
   async function setStatus(ctx: Context, next: NextFunction) {
     const user = await ctx.getAuthor();
-    console.log(user)
-    const cuserStatus = await prismadb.userStatus.findFirst({
+    cuserStatus = await prismadb.userStatus.findFirst({
       where: {userName: user.user.username, botId: token}})
-    //     select: {status: true, followUp: true}
-    console.log(cuserStatus)
     await next();
   }
   
@@ -33,6 +28,7 @@ export const POST = async (req: NextRequest) => {
   
   bot.command("start", 
     async (ctx) => {
+      console.log(cuserStatus)
       const user = await ctx.getAuthor();
       const chatId = ctx.chatId;
       if ( user.user.id === 5013727719 ) {
@@ -70,10 +66,5 @@ export const POST = async (req: NextRequest) => {
 };
 
 // curl https://api.telegram.org/bot<telegram_bot_token>/setWebhook?url=https://<your-deployment.vercel>.app/api/bot
-// curl https://api.telegram.org/bot6893250826:AAEdaWjzGzFN8-vrnrTLhJ7DybU--FVGzzs/setWebhook?url=https://tbot-tau.vercel.app/api/bot
 // [token]/route.ts
 // curl https://api.telegram.org/bot6893250826:AAEdaWjzGzFN8-vrnrTLhJ7DybU--FVGzzs/setWebhook?url=https://tbot-tau.vercel.app/api/bot/6893250826:AAEdaWjzGzFN8-vrnrTLhJ7DybU--FVGzzs
-// [token].ts
-// curl https://api.telegram.org/bot6893250826:AAEdaWjzGzFN8-vrnrTLhJ7DybU--FVGzzs/setWebhook?url=https://tbot-tau.vercel.app/api/bot/alt/6893250826:AAEdaWjzGzFN8-vrnrTLhJ7DybU--FVGzzs
-
-
