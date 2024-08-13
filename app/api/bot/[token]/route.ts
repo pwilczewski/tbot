@@ -15,10 +15,9 @@ const openai = new OpenAI();
 
 export const POST = async (req: NextRequest) => {
 
-  // request comes in with BOT_TOKEN
-  // const { token } = req.query;
-  console.log(req.nextUrl)
-  const token = process.env.TELEGRAM_BOT_TOKEN as string;
+  // parse url to get BOT_TOKEN
+  const token = req.nextUrl.href.match(/([^\/]+)$/)?.[0];
+  // const token = process.env.TELEGRAM_BOT_TOKEN as string;
   const bot = new Bot(token as string);
   
   // ratelimiter
