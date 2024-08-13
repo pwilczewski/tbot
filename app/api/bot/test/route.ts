@@ -13,7 +13,7 @@ import { NextRequest } from "next/server";
 
 const openai = new OpenAI();
 
-export async function POST (req: Request) {
+export const POST = async (req: NextRequest) => {
 
   console.log(req)
 
