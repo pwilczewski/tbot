@@ -6,9 +6,21 @@ import prismadb from "@/lib/prismadb";
 const token = process.env.TELEGRAM_BOT_TOKEN as string;
 const bot = new Bot(token);
 const openai = new OpenAI();
+let userStatus;
 
 // ratelimiter
 bot.use(limit());
+
+// user.user.username is not required, but id is required hmm...
+async function setStatus(ctx: Context, next: NextFunction) {
+  const user = await ctx.getAuthor();
+  userStatus = prismadb.userStatus.findFirst({
+    where: {userName: user.user.username},
+    select: {status: true, followUp: true}})
+  await next();
+}
+
+bot.use(setStatus);
 
 /*
 // middleware example - logs reponse time to console
@@ -28,6 +40,7 @@ bot.use(responseTime);
 
 bot.command("start", 
   async (ctx) => {
+    console.log(userStatus)
     const user = await ctx.getAuthor();
     const chatId = ctx.chatId;
     if ( user.user.id === 5013727719 ) {
@@ -47,14 +60,6 @@ bot.command("train", async (ctx) => {
   } else {
     await bot.api.sendMessage(chatId, "No further questions")
   }
-  /*
-  if (question!==null) {
-    await bot.api.sendMessage(chatId, question.question as string);
-  } else {
-    await bot.api.sendMessage(chatId, "Nothing found");
-  }
-  */
-  // go to supabase and get a question
 });
 
 bot.on("message", async (ctx) => {
@@ -69,27 +74,6 @@ bot.on("message", async (ctx) => {
 });
 
 export const POST = webhookCallback(bot, "std/http");
-
-/*
-export const POST = async (req: NextRequest) => {
-  const token = process.env.TELEGRAM_BOT_TOKEN as string
-  const bot = new Bot(token)
-  const openai = new OpenAI();
-
-  bot.on("message", async (ctx) => {
-    // await ctx.reply("...");
-    const message = ctx.message.text as string;
-    const chatId = ctx.chatId;
-
-    const resp = await openai.chat.completions.create({model: 'gpt-4o-mini', 
-        messages: [{ role: 'user', content: message }]
-    });
-    await bot.api.sendMessage(chatId, resp.choices[0].message.content as string);
-  });
-  const handleUpdate = webhookCallback(bot, "std/http");
-  return handleUpdate(req);
-};
-*/
 
 
 // curl https://api.telegram.org/bot<telegram_bot_token>/setWebhook?url=https://<your-deployment.vercel>.app/api/bot
