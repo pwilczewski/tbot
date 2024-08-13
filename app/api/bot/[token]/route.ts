@@ -3,12 +3,8 @@ import OpenAI from 'openai';
 import { limit } from "@grammyjs/ratelimiter";
 import prismadb from "@/lib/prismadb";
 import { userStatus } from "@prisma/client";
-import { NextApiRequest } from "next";
 import { NextRequest } from "next/server";
 
-// in the setup use [token] in the API route
-// then each bot uses a unique API route
-// and I get the bot token from the API route
 // all interactions need to be BOT_TOKEN / user pairs
 
 const openai = new OpenAI();
@@ -17,10 +13,8 @@ export const POST = async (req: NextRequest) => {
 
   // parse url to get BOT_TOKEN
   const token = req.nextUrl.href.match(/([^\/]+)$/)?.[0];
-  // const token = process.env.TELEGRAM_BOT_TOKEN as string;
   const bot = new Bot(token as string);
   
-  // ratelimiter
   bot.use(limit());
   
   // set the global status, but I still need bot/user pairs...
@@ -28,8 +22,9 @@ export const POST = async (req: NextRequest) => {
   async function setStatus(ctx: Context, next: NextFunction) {
     const user = await ctx.getAuthor();
     const cuserStatus = prismadb.userStatus.findFirst({
-      where: {userName: user.user.username}})
+      where: {userName: user.user.username, botId: token}})
     //     select: {status: true, followUp: true}
+    console.log(cuserStatus)
     await next();
   }
   

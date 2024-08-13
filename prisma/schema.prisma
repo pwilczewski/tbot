@@ -23,6 +23,7 @@ model userStatus {
   questionId String?  @db.Uuid
   followUp   Boolean?
   status     String?
+  botId      String?
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
