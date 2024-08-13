@@ -4,6 +4,7 @@ import { limit } from "@grammyjs/ratelimiter";
 import prismadb from "@/lib/prismadb";
 import { userStatus } from "@prisma/client";
 import { NextApiRequest } from "next";
+import { NextRequest } from "next/server";
 
 // in the setup use [token] in the API route
 // then each bot uses a unique API route
@@ -12,10 +13,12 @@ import { NextApiRequest } from "next";
 
 const openai = new OpenAI();
 
-export const POST = async (req: NextApiRequest) => {
+export const POST = async (req: NextRequest) => {
 
   // request comes in with BOT_TOKEN
-  const { token } = req.query;
+  // const { token } = req.query;
+  console.log(req.nextUrl)
+  const token = process.env.TELEGRAM_BOT_TOKEN as string;
   const bot = new Bot(token as string);
   
   // ratelimiter
@@ -67,7 +70,8 @@ export const POST = async (req: NextApiRequest) => {
     await bot.api.sendMessage(chatId, resp.choices[0].message.content as string);
   });
 
-  return webhookCallback(bot, "std/http");
+  const handler = webhookCallback(bot, "std/http");
+  return handler(req)
 };
 
 // curl https://api.telegram.org/bot<telegram_bot_token>/setWebhook?url=https://<your-deployment.vercel>.app/api/bot
