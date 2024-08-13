@@ -13,7 +13,9 @@ import { NextRequest } from "next/server";
 
 const openai = new OpenAI();
 
-export const POST = async () => {
+export const POST = async (req: NextRequest) => {
+
+  console.log(req)
 
   // get token
   const token = process.env.TELEGRAM_BOT_TOKEN as string;
@@ -33,7 +35,9 @@ export const POST = async () => {
       }
   });
 
-  return webhookCallback(bot, "std/http");
+  const handler = webhookCallback(bot, "std/http")
+
+  return handler(req);
 };
 
 // curl https://api.telegram.org/bot<telegram_bot_token>/setWebhook?url=https://<your-deployment.vercel>.app/api/bot
