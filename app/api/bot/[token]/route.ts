@@ -21,6 +21,7 @@ export const POST = async (req: NextRequest) => {
   // user.user.username is not required, but id is required hmm...
   async function setStatus(ctx: Context, next: NextFunction) {
     const user = await ctx.getAuthor();
+    console.log(user)
     const cuserStatus = prismadb.userStatus.findFirst({
       where: {userName: user.user.username, botId: token}})
     //     select: {status: true, followUp: true}
