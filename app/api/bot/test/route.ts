@@ -4,6 +4,7 @@ import { limit } from "@grammyjs/ratelimiter";
 import prismadb from "@/lib/prismadb";
 import { userStatus } from "@prisma/client";
 import { NextApiRequest } from "next";
+import { NextRequest } from "next/server";
 
 // in the setup use [token] in the API route
 // then each bot uses a unique API route
@@ -12,7 +13,7 @@ import { NextApiRequest } from "next";
 
 const openai = new OpenAI();
 
-export const POST = async (req: NextApiRequest) => {
+export const POST = async (req: NextRequest) => {
 
   console.log(req)
   // get token
