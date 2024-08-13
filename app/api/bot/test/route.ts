@@ -13,9 +13,8 @@ import { NextRequest } from "next/server";
 
 const openai = new OpenAI();
 
-export const POST = async (req: NextRequest) => {
+export const POST = async () => {
 
-  console.log(req)
   // get token
   const token = process.env.TELEGRAM_BOT_TOKEN as string;
   const bot = new Bot(token as string);
