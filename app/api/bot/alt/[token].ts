@@ -14,6 +14,8 @@ const openai = new OpenAI();
 
 export const POST = async (req: NextApiRequest) => {
 
+  console.log(req.query)
+
   // request comes in with BOT_TOKEN
   const { token } = req.query;
   const bot = new Bot(token as string);
@@ -72,6 +74,6 @@ export const POST = async (req: NextApiRequest) => {
 
 // curl https://api.telegram.org/bot<telegram_bot_token>/setWebhook?url=https://<your-deployment.vercel>.app/api/bot
 // curl https://api.telegram.org/bot6893250826:AAEdaWjzGzFN8-vrnrTLhJ7DybU--FVGzzs/setWebhook?url=https://tbot-tau.vercel.app/api/bot
-// curl https://api.telegram.org/bot6893250826:AAEdaWjzGzFN8-vrnrTLhJ7DybU--FVGzzs/setWebhook?url=https://tbot-tau.vercel.app/api/bot/6893250826:AAEdaWjzGzFN8-vrnrTLhJ7DybU--FVGzzs
+// curl https://api.telegram.org/bot6893250826:AAEdaWjzGzFN8-vrnrTLhJ7DybU--FVGzzs/setWebhook?url=https://tbot-tau.vercel.app/api/bot/alt/6893250826:AAEdaWjzGzFN8-vrnrTLhJ7DybU--FVGzzs
 
 
