@@ -22,7 +22,7 @@ export const POST = async (req: NextRequest) => {
   async function setStatus(ctx: Context, next: NextFunction) {
     const user = await ctx.getAuthor();
     console.log(user)
-    const cuserStatus = prismadb.userStatus.findFirst({
+    const cuserStatus = await prismadb.userStatus.findFirst({
       where: {userName: user.user.username, botId: token}})
     //     select: {status: true, followUp: true}
     console.log(cuserStatus)
