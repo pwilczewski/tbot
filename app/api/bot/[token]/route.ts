@@ -66,7 +66,7 @@ export const POST = async (req: NextRequest) => {
     const message = ctx.message.text as string;
     const chatId = ctx.chatId;
 
-    const botinfo = bot.api.getMe()
+    const botinfo = await bot.api.getMe()
     console.log(botinfo)
 
     if (cuserStatus!==null) {
