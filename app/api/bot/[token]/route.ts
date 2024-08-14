@@ -37,10 +37,9 @@ export const POST = async (req: NextRequest) => {
   
   bot.command("start", 
     async (ctx) => {
-      console.log(cuserStatus)
       const chatId = ctx.chatId;
       // add isOwner check here
-      if ( cuserStatus !== null ) {
+      if ( cuserStatus !== null && cuserStatus.isOwner===true ) {
         await bot.api.sendMessage(chatId, "Creator start")
       } else {
         await bot.api.sendMessage(chatId, "Other start")
@@ -69,20 +68,25 @@ export const POST = async (req: NextRequest) => {
 
     if (cuserStatus!==null) {
       if (cuserStatus.status==="question") {
-        // update answer with message
-        await prismadb.answers.create({data: {botId: 1, questionId: 2, answer: message}})
+
+        // different behavior for new questions and follow ups
+
+        // create a new answer
+        await prismadb.answers.create({data: {botId: 1, questionId: cuserStatus.questionId, 
+                                              answer: message}})
+        
+        // ask a follow up question
+        // update status to followup
+        // await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {status: "followup"}})
+        // write a follow up question
 
         // reply with a new question
         const question = await randomQ();
         if (question!==null) {
           await bot.api.sendMessage(chatId, question.question as string)
-          // update questionId in cuserStatus
-          await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {questionId: question.id}})
+          await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
+                                            data: {questionId: question.id}})
         }
-        
-        // update status to followup
-        // await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {status: "followup"}})
-        // write a follow up question
       }
     }
     
