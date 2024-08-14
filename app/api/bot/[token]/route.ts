@@ -10,7 +10,7 @@ const openai = new OpenAI();
 async function randomQ() {
   const count = await prismadb.basedQuestions.count({where: {questionCategory: "intro"}});
   const randomOffset = Math.floor(Math.random() * count);
-  const question = await prismadb.basedQuestions.findFirst({select: {question: true}, 
+  const question = await prismadb.basedQuestions.findFirst({ 
         where: {questionCategory: "intro"}, skip: randomOffset})
   return question
 }
@@ -69,12 +69,15 @@ export const POST = async (req: NextRequest) => {
 
     if (cuserStatus!==null) {
       if (cuserStatus.status==="question") {
-        await prismadb.answers.create({data: {botId: 1, questionId: 2, answer: "testing"}})
+        // update answer with message
+        await prismadb.answers.create({data: {botId: 1, questionId: 2, answer: message}})
 
         // reply with a new question
         const question = await randomQ();
         if (question!==null) {
           await bot.api.sendMessage(chatId, question.question as string)
+          // update questionId in cuserStatus
+          await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {questionId: question.id}})
         }
         
         // update status to followup
