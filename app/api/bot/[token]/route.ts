@@ -66,21 +66,32 @@ export const POST = async (req: NextRequest) => {
     const message = ctx.message.text as string;
     const chatId = ctx.chatId;
 
+    const botinfo = bot.api.getMe()
+    console.log(botinfo)
+
     if (cuserStatus!==null) {
       if (cuserStatus.status==="question") {
+        // create a new answer, should I write a Q/A pair here? 
 
-        // different behavior for new questions and follow ups
+        // get the question!
+        const question = await prismadb.basedQuestions.findFirst({where: {id: cuserStatus.questionId as bigint}})
 
-        // create a new answer
-        await prismadb.answers.create({data: {botId: 1, questionId: cuserStatus.questionId, 
-                                              answer: message}})
-        
         // ask a follow up question
-        // update status to followup
-        // await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {status: "followup"}})
-        // write a follow up question
+        if (question!==null) {
+          const fuQ = await openai.chat.completions.create({
+            messages: [{ role: "system", content: "Ask a follow up question to the user's answer. Resopnd with just the question."},
+                {role: "user", content: "Question: " +  question.question + "\n " + "Answer: " + message }],
+            model: 'gpt-4o-mini', })
+          await bot.api.sendMessage(chatId, fuQ.choices[0].message.content as string)
 
-        // reply with a new question
+          await prismadb.answers.create({data: {botId: 1, questionId: cuserStatus.questionId, answer: message}})
+          await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {status: "followup"}})
+        }
+      } else if (cuserStatus.status==="followup") {
+
+        // record answer from follow up
+        await prismadb.answers.update({where: {id: cuserStatus.id}, data: {answer: message}})
+
         const question = await randomQ();
         if (question!==null) {
           await bot.api.sendMessage(chatId, question.question as string)
@@ -88,15 +99,6 @@ export const POST = async (req: NextRequest) => {
                                             data: {questionId: question.id}})
         }
       }
-    }
-    
-    if (false) {
-      const resp = await openai.chat.completions.create({model: 'gpt-4o-mini', 
-          messages: [{ role: 'user', content: message }]
-      });
-      await bot.api.sendMessage(chatId, resp.choices[0].message.content as string);
-    } else {
-      await bot.api.sendMessage(chatId, "Nothing to see");
     }
   });
 
