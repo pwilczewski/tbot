@@ -7,6 +7,14 @@ import { NextRequest } from "next/server";
 
 const openai = new OpenAI();
 
+async function randomQ() {
+  const count = await prismadb.basedQuestions.count({where: {questionCategory: "intro"}});
+  const randomOffset = Math.floor(Math.random() * count);
+  const question = await prismadb.basedQuestions.findFirst({select: {question: true}, 
+        where: {questionCategory: "intro"}, skip: randomOffset})
+  return question
+}
+
 export const POST = async (req: NextRequest) => {
 
   // parse url to get BOT_TOKEN
@@ -21,6 +29,7 @@ export const POST = async (req: NextRequest) => {
     const user = await ctx.getAuthor();
     cuserStatus = await prismadb.userStatus.findFirst({
       where: {userName: user.user.username, botId: token}})
+    // if the user doesn't have a status here, create it... with chat status?
     await next();
   }
   
@@ -29,9 +38,9 @@ export const POST = async (req: NextRequest) => {
   bot.command("start", 
     async (ctx) => {
       console.log(cuserStatus)
-      const user = await ctx.getAuthor();
       const chatId = ctx.chatId;
-      if ( user.user.id === 5013727719 ) {
+      // add isOwner check here
+      if ( cuserStatus !== null ) {
         await bot.api.sendMessage(chatId, "Creator start")
       } else {
         await bot.api.sendMessage(chatId, "Other start")
@@ -40,10 +49,13 @@ export const POST = async (req: NextRequest) => {
   
   bot.command("train", async (ctx) => {
     const chatId = ctx.chatId;
-    await bot.api.sendMessage(chatId, "Training mode enabled")
     await bot.api.sendMessage(chatId, "Retrieving questions")
-    const question = await prismadb.basedQuestions.findFirst({select: {question: true}})
+    const question = await randomQ();
+
     if (question !== null) {
+      if (cuserStatus!==null) {
+        await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {status: "question"}})
+      }
       await bot.api.sendMessage(chatId, question.question as string)
     } else {
       await bot.api.sendMessage(chatId, "No further questions")
@@ -54,11 +66,31 @@ export const POST = async (req: NextRequest) => {
     // await ctx.reply("...");
     const message = ctx.message.text as string;
     const chatId = ctx.chatId;
-  
-    const resp = await openai.chat.completions.create({model: 'gpt-4o-mini', 
-        messages: [{ role: 'user', content: message }]
-    });
-    await bot.api.sendMessage(chatId, resp.choices[0].message.content as string);
+
+    if (cuserStatus!==null) {
+      if (cuserStatus.status==="question") {
+        await prismadb.answers.create({data: {botId: 1, questionId: 2, answer: "testing"}})
+
+        // reply with a new question
+        const question = await randomQ();
+        if (question!==null) {
+          await bot.api.sendMessage(chatId, question.question as string)
+        }
+        
+        // update status to followup
+        // await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {status: "followup"}})
+        // write a follow up question
+      }
+    }
+    
+    if (false) {
+      const resp = await openai.chat.completions.create({model: 'gpt-4o-mini', 
+          messages: [{ role: 'user', content: message }]
+      });
+      await bot.api.sendMessage(chatId, resp.choices[0].message.content as string);
+    } else {
+      await bot.api.sendMessage(chatId, "Nothing to see");
+    }
   });
 
   const handler = webhookCallback(bot, "std/http");
