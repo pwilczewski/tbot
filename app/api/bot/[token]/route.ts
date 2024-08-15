@@ -61,6 +61,24 @@ export const POST = async (req: NextRequest) => {
       await bot.api.sendMessage(chatId, "No further questions")
     }
   });
+
+  // what other commands? help? restart? chat? info? clear?
+  // don't do too many commands! can show diff info for train / chat
+  bot.command("skip", async (ctx) => {
+    const chatId = ctx.chatId;
+    await bot.api.sendMessage(chatId, "Retrieving questions")
+    const question = await randomQ();
+
+    if (question !== null) {
+      if (cuserStatus!==null) {
+        await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
+          data: {status: "question", question: question.question as string}})
+      }
+      await bot.api.sendMessage(chatId, question.question as string)
+    } else {
+      await bot.api.sendMessage(chatId, "No further questions")
+    }
+  })
   
   bot.on("message", async (ctx) => {
     // await ctx.reply("...");
