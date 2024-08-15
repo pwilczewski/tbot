@@ -91,7 +91,7 @@ export const POST = async (req: NextRequest) => {
           await bot.api.sendMessage(chatId, question.question as string)
           await prismadb.answers.update({where: {id: cuserStatus.id}, data: {question: cuserStatus.question, answer: message}})
           await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
-                                            data: {questionId: question.id, question: question.question}})
+                                            data: {questionId: question.id, question: question.question, status: "question"}})
         }
       }
     }
