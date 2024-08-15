@@ -53,7 +53,7 @@ export const POST = async (req: NextRequest) => {
 
     if (question !== null) {
       if (cuserStatus!==null) {
-        await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {status: "question"}})
+        await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {status: "question", question: question.question as string}})
       }
       await bot.api.sendMessage(chatId, question.question as string)
     } else {
@@ -66,37 +66,32 @@ export const POST = async (req: NextRequest) => {
     const message = ctx.message.text as string;
     const chatId = ctx.chatId;
 
-    const botinfo = await bot.api.getMe()
-    console.log(botinfo)
+    // const botinfo = await bot.api.getMe()
 
     if (cuserStatus!==null) {
       if (cuserStatus.status==="question") {
-        // create a new answer, should I write a Q/A pair here? 
-
-        // get the question!
-        const question = await prismadb.basedQuestions.findFirst({where: {id: cuserStatus.questionId as bigint}})
+        // const question = await prismadb.answers.findFirst({where: {id: cuserStatus.questionId as bigint}})
 
         // ask a follow up question
-        if (question!==null) {
-          const fuQ = await openai.chat.completions.create({
-            messages: [{ role: "system", content: "Ask a follow up question to the user's answer. Resopnd with just the question."},
-                {role: "user", content: "Question: " +  question.question + "\n " + "Answer: " + message }],
-            model: 'gpt-4o-mini', })
-          await bot.api.sendMessage(chatId, fuQ.choices[0].message.content as string)
+        const fuQ = await openai.chat.completions.create({
+          messages: [{ role: "system", content: "Ask a follow up question to the user's answer. Respond with just the question."},
+              {role: "user", content: "Question: " +  cuserStatus.question + "\n " + "Answer: " + message }],
+          model: 'gpt-4o-mini', })
+        const resp = fuQ.choices[0].message.content as string
+        await bot.api.sendMessage(chatId, resp)
 
-          await prismadb.answers.create({data: {botId: 1, questionId: cuserStatus.questionId, answer: message}})
-          await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {status: "followup"}})
-        }
+        // write answer and update status
+        await prismadb.answers.create({data: {botId: 1, questionId: cuserStatus.questionId, question: cuserStatus.question, answer: message}})
+        await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {status: "followup", question: resp}})
       } else if (cuserStatus.status==="followup") {
 
-        // record answer from follow up
-        await prismadb.answers.update({where: {id: cuserStatus.id}, data: {answer: message}})
-
+        // generate new question, record answer from previous
         const question = await randomQ();
         if (question!==null) {
           await bot.api.sendMessage(chatId, question.question as string)
+          await prismadb.answers.update({where: {id: cuserStatus.id}, data: {question: cuserStatus.question, answer: message}})
           await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
-                                            data: {questionId: question.id}})
+                                            data: {questionId: question.id, question: question.question}})
         }
       }
     }

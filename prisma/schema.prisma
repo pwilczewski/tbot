@@ -24,6 +24,7 @@ model userStatus {
   botId      String?
   questionId BigInt?
   id         BigInt   @id @default(autoincrement())
+  question   String?
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -41,6 +42,7 @@ model answers {
   botId      BigInt?
   answer     String?
   questionId BigInt?
+  question   String?
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
