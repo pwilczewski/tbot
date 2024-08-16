@@ -31,10 +31,7 @@ async function addEmbeddings (questionId: bigint) {
   const eVec = Array.from(response.data[0].embedding);
 
   await supabase.from('documents').upsert({
-    body: 'This is a sample document.',
-    title: 'Sample',
-    embedding: eVec,
-    botId: 1
+    body: convo, embedding: eVec, botId: 1
   })
 }
 

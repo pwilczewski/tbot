@@ -55,7 +55,6 @@ model bots {
 
 model documents {
   id        Int                    @id @default(autoincrement())
-  title     String
   body      String
   embedding Unsupported("vector")?
   botId     BigInt?
