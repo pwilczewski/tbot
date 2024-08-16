@@ -58,4 +58,5 @@ model documents {
   title     String
   body      String
   embedding Unsupported("vector")?
+  botId     BigInt?
 }

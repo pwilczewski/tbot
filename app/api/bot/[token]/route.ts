@@ -16,21 +16,25 @@ async function randomQ() {
   return question
 }
 
-async function addEmbeddings (answer: string) {
+async function addEmbeddings (questionId: bigint) {
+
+  const qanda = await prismadb.answers.findMany({where: {questionId: questionId}, select: {question: true, answer: true}})
+  const convo = qanda[0].question as string + " " + qanda[0].answer + " " + qanda[1].question + " " + qanda[1].answer
 
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, 
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string)
 
   const response = await openai.embeddings.create({
-    model: 'text-embedding-3-small', input: answer
+    model: 'text-embedding-3-small', input: convo
   });
   
-  const eVec = Array.from(response.data[0].embedding); // Extract the embedding
+  const eVec = Array.from(response.data[0].embedding);
 
   await supabase.from('documents').upsert({
     body: 'This is a sample document.',
     title: 'Sample',
     embedding: eVec,
+    botId: 1
   })
 }
 
@@ -129,6 +133,9 @@ export const POST = async (req: NextRequest) => {
           await bot.api.sendMessage(chatId, question.question as string)
           await prismadb.answers.create({data: {botId: 1, questionId: cuserStatus.questionId, 
             question: cuserStatus.question, answer: message}})
+
+          await addEmbeddings(cuserStatus.questionId as bigint) // embed the entire convo id here
+
           await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
             data: {questionId: question.id, question: question.question, status: "question"}})
         }
