@@ -52,3 +52,10 @@ model bots {
   token      String?
   owner      String?
 }
+
+model documents {
+  id        Int                    @id @default(autoincrement())
+  title     String
+  body      String
+  embedding Unsupported("vector")?
+}

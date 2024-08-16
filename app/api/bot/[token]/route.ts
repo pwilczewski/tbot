@@ -4,6 +4,7 @@ import { limit } from "@grammyjs/ratelimiter";
 import prismadb from "@/lib/prismadb";
 import { userStatus } from "@prisma/client";
 import { NextRequest } from "next/server";
+import { createClient } from '@supabase/supabase-js'
 
 const openai = new OpenAI();
 
@@ -13,6 +14,24 @@ async function randomQ() {
   const question = await prismadb.basedQuestions.findFirst({ 
     where: {questionCategory: "intro"}, skip: randomOffset})
   return question
+}
+
+async function addEmbeddings (answer: string) {
+
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, 
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string)
+
+  const response = await openai.embeddings.create({
+    model: 'text-embedding-3-small', input: answer
+  });
+  
+  const eVec = Array.from(response.data[0].embedding); // Extract the embedding
+
+  await supabase.from('documents').upsert({
+    body: 'This is a sample document.',
+    title: 'Sample',
+    embedding: eVec,
+  })
 }
 
 export const POST = async (req: NextRequest) => {
