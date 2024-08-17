@@ -2,17 +2,24 @@ import { Bot, Context, NextFunction, webhookCallback } from "grammy";
 import OpenAI from 'openai';
 import { limit } from "@grammyjs/ratelimiter";
 import prismadb from "@/lib/prismadb";
-import { userStatus } from "@prisma/client";
-import { NextRequest } from "next/server";
+import { userStatus, users } from "@prisma/client";
+import { NextRequest, userAgent } from "next/server";
 import { createClient } from '@supabase/supabase-js'
 
 const openai = new OpenAI();
 
-async function randomQ() {
-  const count = await prismadb.basedQuestions.count({where: {questionCategory: "intro"}});
+// definitely possible that there are no questions answered and answeredQs comes in as null
+async function randomQ(answeredQs: {questionId: bigint | null}[]) {
+
+  let excludeQs: bigint[] = [];
+  if (answeredQs!==null) {
+    excludeQs = answeredQs.map(item => item.questionId).filter((id): id is bigint => id !== null);
+  }
+  const count = await prismadb.basedQuestions.count({where: {questionCategory: "intro", id: {notIn: excludeQs}}});
   const randomOffset = Math.floor(Math.random() * count);
   const question = await prismadb.basedQuestions.findFirst({ 
-    where: {questionCategory: "intro"}, skip: randomOffset})
+    where: {questionCategory: "intro", id: {notIn: excludeQs}}, skip: randomOffset})
+
   return question
 }
 
@@ -31,7 +38,7 @@ async function addEmbeddings (questionId: bigint) {
   const eVec = Array.from(response.data[0].embedding);
 
   await supabase.from('documents').upsert({
-    body: convo, embedding: eVec, botId: 1
+    body: convo, embedding: eVec, botId: 1, questionId: questionId
   })
 }
 
@@ -40,45 +47,92 @@ export const POST = async (req: NextRequest) => {
   // parse url to get BOT_TOKEN
   const token = req.nextUrl.href.match(/([^\/]+)$/)?.[0];
   const bot = new Bot(token as string);
+  let dbUser: users | null;
   let cuserStatus: userStatus | null;
+  let isOwner: boolean | null;
+  const botId = await prismadb.bots.findMany({where: {token: token}, select: {id: true}})
   
   bot.use(limit());
   
+  // deny auth here based on users?
   // user.user.username is not required, but id is required hmm...
   async function setStatus(ctx: Context, next: NextFunction) {
     const user = await ctx.getAuthor();
-    cuserStatus = await prismadb.userStatus.findFirst({
-      where: {userName: user.user.username, botId: token}})
-    // if the user doesn't have a status here, create it... with chat status?
+    dbUser = await prismadb.users.findFirst({where: {userName: user.user.username}})
+
+    // check if user is the owner of the bot
+    const checkOwner = await prismadb.bots.findFirst({ where: {token: token, owner: user.user.username} })
+    isOwner = checkOwner===null;
+
+    // if user does not exist, create user and initialize status
+    if (dbUser===null) {
+      await prismadb.users.create({data: {userName: user.user.username, telegramId: user.user.id}})
+      dbUser = await prismadb.users.findFirst({ where: {userName: user.user.username} })
+      cuserStatus = await prismadb.userStatus.create({data: {status: "start", userName: user.user.username, 
+        botId: token, isOwner: isOwner, question: "", questionId: null
+      }})
+    } else {
+      cuserStatus = await prismadb.userStatus.findFirst({
+        where: {userName: user.user.username, botId: token}})
+    }
+
+    // this case (probably?) never happens
+    /*
+    // if status is missing, create it - but will this ever really happen?
+    if (cuserStatus===null) {
+      cuserStatus = await prismadb.userStatus.create({data: {status: "start", userName: user.user.username, 
+        botId: token, isOwner: isOwner, question: "", questionId: null
+      }})
+    }
+    */
+
     await next();
   }
   
   bot.use(setStatus);
-  
+
+  // maybe some of this should go in middleware? like know who you're interacting with
   bot.command("start", 
     async (ctx) => {
       const chatId = ctx.chatId;
-      // add isOwner check here
-      if ( cuserStatus !== null && cuserStatus.isOwner===true ) {
-        await bot.api.sendMessage(chatId, "Creator start")
+      const user = await ctx.getAuthor();
+
+      // add documentation for available commands here
+      if ( isOwner===false ) {
+        await bot.api.sendMessage(chatId, "User start")
       } else {
-        await bot.api.sendMessage(chatId, "Other start")
+        await bot.api.sendMessage(chatId, "Owner start")
       }
   });
+
+  // switch to chat status, user is always in chat status
+  bot.command("chat", async (ctx) => {
+    const chatId = ctx.chatId;
+    if (cuserStatus!==null) {
+      // should I clear questions here?
+      await prismadb.userStatus.update({ where: {id: cuserStatus.id}, data: {status: "chat"} })
+    }
+  });
   
+  // only owner can enter train status
   bot.command("train", async (ctx) => {
     const chatId = ctx.chatId;
-    await bot.api.sendMessage(chatId, "Retrieving questions")
-    const question = await randomQ();
 
-    if (question !== null) {
-      if (cuserStatus!==null) {
-        await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
-          data: {status: "question", question: question.question as string}})
-      }
-      await bot.api.sendMessage(chatId, question.question as string)
+    if (isOwner===false) {
+      await bot.api.sendMessage(chatId, "Only the bot's owner can train")
     } else {
-      await bot.api.sendMessage(chatId, "No further questions")
+      await bot.api.sendMessage(chatId, "Retrieving questions")
+      const answeredQs = await prismadb.answers.findMany({ where: {botId: botId[0].id} , 
+        select: {questionId: true}, distinct: ['questionId']})      
+      const question = await randomQ(answeredQs);
+  
+      if (question !== null) {
+        if (cuserStatus!==null) {
+          await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
+            data: {status: "question", question: question.question as string}})
+        }
+        await bot.api.sendMessage(chatId, question.question as string)
+      }
     }
   });
 
@@ -87,7 +141,9 @@ export const POST = async (req: NextRequest) => {
   bot.command("skip", async (ctx) => {
     const chatId = ctx.chatId;
     await bot.api.sendMessage(chatId, "Retrieving questions")
-    const question = await randomQ();
+    const answeredQs = await prismadb.answers.findMany({ where: {botId: botId[0].id} , 
+      select: {questionId: true}, distinct: ['questionId']})
+    const question = await randomQ(answeredQs);
 
     if (question !== null) {
       if (cuserStatus!==null) {
@@ -125,7 +181,9 @@ export const POST = async (req: NextRequest) => {
       } else if (cuserStatus.status==="followup") {
 
         // generate new question, record answer from previous
-        const question = await randomQ();
+        const answeredQs = await prismadb.answers.findMany({ where: {botId: botId[0].id} , 
+          select: {questionId: true}, distinct: ['questionId']})
+        const question = await randomQ(answeredQs);
         if (question!==null) {
           await bot.api.sendMessage(chatId, question.question as string)
           await prismadb.answers.create({data: {botId: 1, questionId: cuserStatus.questionId, 
