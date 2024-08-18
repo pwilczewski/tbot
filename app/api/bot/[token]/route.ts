@@ -5,8 +5,11 @@ import prismadb from "@/lib/prismadb";
 import { userStatus, users } from "@prisma/client";
 import { NextRequest, userAgent } from "next/server";
 import { createClient } from '@supabase/supabase-js'
+import { exit } from "process";
 
 const openai = new OpenAI();
+
+exit;
 
 // definitely possible that there are no questions answered and answeredQs comes in as null
 async function randomQ(answeredQs: {questionId: bigint | null}[]) {
