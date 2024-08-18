@@ -9,11 +9,9 @@ import { createClient } from '@supabase/supabase-js'
 const openai = new OpenAI();
 
 export const POST = async (req: NextRequest) => {
-  return false;
 }
 
 /*
-
 // definitely possible that there are no questions answered and answeredQs comes in as null
 async function randomQ(answeredQs: {questionId: bigint | null}[]) {
 
@@ -199,7 +197,6 @@ export const POST = async (req: NextRequest) => {
   const handler = webhookCallback(bot, "std/http");
   return handler(req)
 };
-*/
 
 // curl https://api.telegram.org/bot<telegram_bot_token>/setWebhook?url=https://<your-deployment.vercel>.app/api/bot
 // [token]/route.ts
