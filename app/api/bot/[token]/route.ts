@@ -3,13 +3,14 @@ import OpenAI from 'openai';
 import { limit } from "@grammyjs/ratelimiter";
 import prismadb from "@/lib/prismadb";
 import { userStatus, users } from "@prisma/client";
-import { NextRequest, userAgent } from "next/server";
+import { NextRequest } from "next/server";
 import { createClient } from '@supabase/supabase-js'
-import { exit } from "process";
 
 const openai = new OpenAI();
 
-exit;
+export const test = async () => { 
+  return false;
+};
 
 // definitely possible that there are no questions answered and answeredQs comes in as null
 async function randomQ(answeredQs: {questionId: bigint | null}[]) {
