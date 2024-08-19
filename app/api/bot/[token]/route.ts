@@ -5,6 +5,9 @@ import prismadb from "@/lib/prismadb";
 import { userStatus, users } from "@prisma/client";
 import { NextRequest } from "next/server";
 import { createClient } from '@supabase/supabase-js'
+import { SupabaseVectorStore } from "@langchain/community/vectorstores/supabase";
+import { OpenAIEmbeddings } from "@langchain/openai";
+import type { Document } from "@langchain/core/documents";
 
 const openai = new OpenAI();
 
@@ -28,21 +31,20 @@ async function addEmbeddings (questionId: bigint) {
   const qanda = await prismadb.answers.findMany({where: {questionId: questionId}, select: {question: true, answer: true}})
   const convo = qanda[0].question as string + " " + qanda[0].answer + " " + qanda[1].question + " " + qanda[1].answer
 
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, 
+  const client = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, 
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string)
 
-  const response = await openai.embeddings.create({
-    model: 'text-embedding-3-small', input: convo
+  const embeddings = new OpenAIEmbeddings({model: "text-embedding-3-small",});
+  const vectorStore = new SupabaseVectorStore(embeddings, {
+    client: client,
+    tableName: "documents",
+    queryName: "match_documents",
   });
-  
-  const eVec = Array.from(response.data[0].embedding);
+
+  const doc1: Document = {pageContent: convo, metadata: {source: "testing"}}
+  await vectorStore.addDocuments([doc1]);
 
   // await prismadb.documents.create({data: {botId: 1, questionId: questionId, body: convo}})
-
-  const {data, error} = await supabase.from('documents').insert({
-    body: convo, embedding: eVec
-  })
-
   // use prismadb to update botid and questionid
 }
 
