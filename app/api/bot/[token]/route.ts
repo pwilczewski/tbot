@@ -64,7 +64,6 @@ export const POST = async (req: NextRequest) => {
     const user = await ctx.getAuthor();
     dbUser = await prismadb.users.findFirst({where: {userName: user.user.username}})
 
-    // check if user is the owner of the bot
     const checkOwner = await prismadb.bots.findFirst({ where: {token: token, owner: user.user.username} })
     isOwner = checkOwner!==null;
 
@@ -85,13 +84,11 @@ export const POST = async (req: NextRequest) => {
   
   bot.use(setStatus);
 
-  // maybe some of this should go in middleware? like know who you're interacting with
+  // add documentation for available commands here
   bot.command("start", 
     async (ctx) => {
       const chatId = ctx.chatId;
-      const user = await ctx.getAuthor();
 
-      // add documentation for available commands here
       if ( isOwner===false ) {
         await bot.api.sendMessage(chatId, "User start")
       } else {
@@ -150,7 +147,7 @@ export const POST = async (req: NextRequest) => {
     }
   })
   
-  // seems to be flipping between "question" and "followup" status
+  // move a lot of this stuff into functions to get my code cleaner
   bot.on("message", async (ctx) => {
     // await ctx.reply("...");
     const message = ctx.message.text as string;
@@ -159,8 +156,8 @@ export const POST = async (req: NextRequest) => {
     // const botinfo = await bot.api.getMe()
 
     if (cuserStatus!==null) {
+      // use AI to ask a follow up question
       if (cuserStatus.status==="question") {
-        // use AI to ask a follow up question
         const fuQ = await openai.chat.completions.create({
           messages: [{ role: "system", content: "Ask a follow up question to the user's answer. Respond with just the question."},
               {role: "user", content: "Question: " +  cuserStatus.question + "\n " + "Answer: " + message }],
@@ -168,13 +165,11 @@ export const POST = async (req: NextRequest) => {
         const resp = fuQ.choices[0].message.content as string
         await bot.api.sendMessage(chatId, resp)
 
-        // write answer and update status
         await prismadb.answers.create({data: {botId: 1, questionId: cuserStatus.questionId, 
           question: cuserStatus.question, answer: message}})
         await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {question: resp}})
-      } else if (cuserStatus.status==="followup") {
 
-        // generate new question, record answer from previous
+      } else if (cuserStatus.status==="followup") {
         const answeredQs = await prismadb.answers.findMany({ where: {botId: botId[0].id} , 
           select: {questionId: true}, distinct: ['questionId']})
         const question = await randomQ(answeredQs);
@@ -190,8 +185,17 @@ export const POST = async (req: NextRequest) => {
 
           await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {questionId: question.id, question: question.question}})
         }
+      } else if (cuserStatus.status==="chat") {
+        // rag it! do i need / want langchain for this part
+        const repQ = await openai.chat.completions.create({
+          messages: [{ role: "system", content: "Give a very short reply to the user's question."},
+              {role: "user", content: message }],
+          model: 'gpt-4o-mini', })
+        const resp = repQ.choices[0].message.content as string
+        await bot.api.sendMessage(chatId, resp)
       }
 
+      // switch status out here to avoid weird loops that were happening
       if (cuserStatus.status==="followup") {
         await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {status: "question"}})
       } else if (cuserStatus.status==="question") {
