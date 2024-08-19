@@ -42,7 +42,8 @@ async function addEmbeddings (questionId: bigint) {
   const {data, error} = await supabase.from('documents').insert({
     body: convo, embedding: eVec
   })
-  console.log(error)
+
+  // use prismadb to update botid and questionid
 }
 
 export const POST = async (req: NextRequest) => {
@@ -78,8 +79,6 @@ export const POST = async (req: NextRequest) => {
       cuserStatus = await prismadb.userStatus.findFirst({
         where: {userName: user.user.username, botId: token}})
     }
-
-    // this case (probably?) never happens
 
     await next();
   }
@@ -151,6 +150,7 @@ export const POST = async (req: NextRequest) => {
     }
   })
   
+  // seems to be flipping between "question" and "followup" status
   bot.on("message", async (ctx) => {
     // await ctx.reply("...");
     const message = ctx.message.text as string;
@@ -184,8 +184,7 @@ export const POST = async (req: NextRequest) => {
           await bot.api.sendMessage(chatId, question.question as string)
           await prismadb.answers.create({data: {botId: 1, questionId: cuserStatus.questionId, 
             question: cuserStatus.question, answer: message}})
-          
-          console.log("pre-embeddings")
+
           if (cuserStatus.questionId!==null) {
             await addEmbeddings(cuserStatus.questionId) // embed the entire convo id here
           }
