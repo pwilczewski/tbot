@@ -62,7 +62,7 @@ export const POST = async (req: NextRequest) => {
 
     // check if user is the owner of the bot
     const checkOwner = await prismadb.bots.findFirst({ where: {token: token, owner: user.user.username} })
-    isOwner = checkOwner===null;
+    isOwner = checkOwner!==null;
 
     // if user does not exist, create user and initialize status
     if (dbUser===null) {
