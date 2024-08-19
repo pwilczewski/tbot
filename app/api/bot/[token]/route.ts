@@ -171,8 +171,7 @@ export const POST = async (req: NextRequest) => {
         // write answer and update status
         await prismadb.answers.create({data: {botId: 1, questionId: cuserStatus.questionId, 
           question: cuserStatus.question, answer: message}})
-        await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
-          data: {status: "followup", question: resp}})
+        await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {question: resp}})
       } else if (cuserStatus.status==="followup") {
 
         // generate new question, record answer from previous
@@ -189,9 +188,14 @@ export const POST = async (req: NextRequest) => {
             await addEmbeddings(cuserStatus.questionId) // embed the entire convo id here
           }
 
-          await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
-            data: {questionId: question.id, question: question.question, status: "question"}})
+          await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {questionId: question.id, question: question.question}})
         }
+      }
+
+      if (cuserStatus.status==="followup") {
+        await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {status: "question"}})
+      } else if (cuserStatus.status==="question") {
+        await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {status: "followup"}})
       }
     }
   });
