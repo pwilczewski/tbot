@@ -25,9 +25,7 @@ async function randomQ(answeredQs: {questionId: bigint | null}[]) {
 
 async function addEmbeddings (questionId: bigint) {
 
-  console.log(questionId)
-
-  const qanda = await prismadb.answers.findMany({where: {questionId: questionId}, select: {question: true, answer: true}})
+  const qanda = await prismadb.answers.findMany({where: {questionId: questionId as bigint}, select: {question: true, answer: true}})
   const convo = qanda[0].question as string + " " + qanda[0].answer + " " + qanda[1].question + " " + qanda[1].answer
 
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, 
@@ -38,6 +36,7 @@ async function addEmbeddings (questionId: bigint) {
   });
   
   const eVec = Array.from(response.data[0].embedding);
+  console.log(eVec)
 
   await supabase.from('documents').upsert({
     body: convo, embedding: eVec, botId: 1, questionId: questionId
