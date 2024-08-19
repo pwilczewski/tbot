@@ -28,14 +28,17 @@ async function addEmbeddings (questionId: bigint) {
   const qanda = await prismadb.answers.findMany({where: {questionId: questionId}, select: {question: true, answer: true}})
   const convo = qanda[0].question as string + " " + qanda[0].answer + " " + qanda[1].question + " " + qanda[1].answer
 
+  console.log(convo)
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, 
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string)
 
   const response = await openai.embeddings.create({
     model: 'text-embedding-3-small', input: convo
   });
+  console.log(response)
   
   const eVec = Array.from(response.data[0].embedding);
+  console.log(eVec)
 
   await supabase.from('documents').upsert({
     body: convo, embedding: eVec, botId: 1, questionId: questionId
@@ -121,7 +124,7 @@ export const POST = async (req: NextRequest) => {
       if (question !== null) {
         if (cuserStatus!==null) {
           await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
-            data: {status: "question", question: question.question as string}})
+            data: {status: "question", question: question.question as string, questionId: question.id}})
         }
         await bot.api.sendMessage(chatId, question.question as string)
       }
@@ -140,7 +143,7 @@ export const POST = async (req: NextRequest) => {
     if (question !== null) {
       if (cuserStatus!==null) {
         await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
-          data: {status: "question", question: question.question as string}})
+          data: {status: "question", question: question.question as string, questionId: question.id}})
       }
       await bot.api.sendMessage(chatId, question.question as string)
     } else {
@@ -176,6 +179,7 @@ export const POST = async (req: NextRequest) => {
         const answeredQs = await prismadb.answers.findMany({ where: {botId: botId[0].id} , 
           select: {questionId: true}, distinct: ['questionId']})
         const question = await randomQ(answeredQs);
+
         if (question!==null) {
           await bot.api.sendMessage(chatId, question.question as string)
           await prismadb.answers.create({data: {botId: 1, questionId: cuserStatus.questionId, 
