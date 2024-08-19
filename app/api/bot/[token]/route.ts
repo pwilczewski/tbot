@@ -25,15 +25,8 @@ async function randomQ(answeredQs: {questionId: bigint | null}[]) {
 
 async function addEmbeddings (questionId: bigint) {
 
-  console.log(questionId)
-
   const qanda = await prismadb.answers.findMany({where: {questionId: questionId}, select: {question: true, answer: true}})
-
-  console.log(qanda)
-
   const convo = qanda[0].question as string + " " + qanda[0].answer + " " + qanda[1].question + " " + qanda[1].answer
-
-  console.log(convo)
 
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, 
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string)
@@ -41,12 +34,10 @@ async function addEmbeddings (questionId: bigint) {
   const response = await openai.embeddings.create({
     model: 'text-embedding-3-small', input: convo
   });
-
-  console.log(response)
   
   const eVec = Array.from(response.data[0].embedding);
 
-  console.log(eVec)
+  // await prismadb.documents.create({data: {botId: 1, questionId: questionId, body: convo}})
 
   await supabase.from('documents').upsert({
     body: convo, embedding: eVec, botId: 1, questionId: questionId
