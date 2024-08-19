@@ -39,9 +39,10 @@ async function addEmbeddings (questionId: bigint) {
 
   // await prismadb.documents.create({data: {botId: 1, questionId: questionId, body: convo}})
 
-  await supabase.from('documents').insert({
-    body: convo, embedding: eVec, botId: 1, questionId: questionId
+  const {data, error} = await supabase.from('documents').insert({
+    body: convo, embedding: eVec
   })
+  console.log(error)
 }
 
 export const POST = async (req: NextRequest) => {
