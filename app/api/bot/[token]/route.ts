@@ -14,6 +14,37 @@ import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
 
 const openai = new OpenAI();
 
+async function chatReply (message: string) {
+  const client = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, 
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string)
+  const embeddings = new OpenAIEmbeddings();
+  const vectorStore = new SupabaseVectorStore(embeddings, {client, tableName: "documents",});
+  const retriever = vectorStore.asRetriever();
+
+  // add name of bot owner, can I use format thing?
+  // do I add chat history?
+  const prompt = ChatPromptTemplate.fromTemplate(
+    `You are answering questions on behalf of Paul.
+    Answer in the first person using the context available. 
+    If the answer is not available in the context don't make up an answer just reply: I don't know. \n
+    Context\n{context}\n Question:\n{question}`
+  );
+
+  const llm = new ChatOpenAI({ model: "gpt-4o-mini", temperature: 0 });
+  const retrievedDocs = await retriever.invoke(message);
+
+  const ragChain = await createStuffDocumentsChain({
+    llm, prompt, outputParser: new StringOutputParser(),
+  });
+
+  const resp = await ragChain.invoke({
+    question: message, context: retrievedDocs,
+  });
+
+  // const retriever = vectorStore.asRetriever({filter: (rpc: SupabaseFilter) => rpc.filter("metadata->>repHandle", "eq", rep.repHandle)});
+  return resp
+}
+
 // definitely possible that there are no questions answered and answeredQs comes in as null
 async function randomQ(answeredQs: {questionId: bigint | null}[]) {
 
@@ -190,36 +221,7 @@ export const POST = async (req: NextRequest) => {
         }
       } else if (cuserStatus.status==="chat") {
 
-        const client = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, 
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string)
-        const embeddings = new OpenAIEmbeddings();
-        const vectorStore = new SupabaseVectorStore(embeddings, {client, tableName: "documents",});
-        const retriever = vectorStore.asRetriever();
-
-        //           So far the user {name} has discussed with you (system) {chatHistory}
-        const prompt = ChatPromptTemplate.fromTemplate(
-          `You are answering questions on behalf of Paul.
-          Now answer the user's questions in the first person using the context available. 
-          If the answer is not available in the context don't make up an answer just reply: I don't know. \n
-          Context\n{context}\n Question:\n{question}`
-        );
-
-        const llm = new ChatOpenAI({ model: "gpt-4o-mini", temperature: 0 });
-        const retrievedDocs = await retriever.invoke(message);
-
-        console.log(retrievedDocs)
-
-        const ragChain = await createStuffDocumentsChain({
-          llm, prompt,
-          outputParser: new StringOutputParser(),
-        });
-
-        const resp = await ragChain.invoke({
-          question: message,
-          context: retrievedDocs,
-        });
-
-        // const retriever = vectorStore.asRetriever({filter: (rpc: SupabaseFilter) => rpc.filter("metadata->>repHandle", "eq", rep.repHandle)});
+        const resp = await chatReply(message)
         await bot.api.sendMessage(chatId, resp)
       }
 
