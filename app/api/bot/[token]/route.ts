@@ -46,11 +46,11 @@ async function chatReply (message: string) {
 }
 
 // definitely possible that there are no questions answered and answeredQs comes in as null
-async function randomQ(answeredQs: {questionId: bigint | null}[]) {
+async function randomQ(answeredQs: {questionId: number | null}[]) {
 
-  let excludeQs: bigint[] = [];
+  let excludeQs: number[] = [];
   if (answeredQs!==null) {
-    excludeQs = answeredQs.map(item => item.questionId).filter((id): id is bigint => id !== null);
+    excludeQs = answeredQs.map(item => item.questionId).filter((id): id is number => id !== null);
   }
   const count = await prismadb.basedQuestions.count({where: {questionCategory: "intro", id: {notIn: excludeQs}}});
   const randomOffset = Math.floor(Math.random() * count);
@@ -60,7 +60,7 @@ async function randomQ(answeredQs: {questionId: bigint | null}[]) {
   return question
 }
 
-async function addEmbeddings (questionId: bigint, botId: bigint) {
+async function addEmbeddings (questionId: number, botId: number) {
 
   const qanda = await prismadb.answers.findMany({where: {questionId: questionId}, select: {question: true, answer: true}})
   const convo = qanda[0].question as string + " " + qanda[0].answer + " " + qanda[1].question + " " + qanda[1].answer
