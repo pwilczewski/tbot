@@ -55,8 +55,9 @@ model bots {
 
 model documents {
   id         BigInt                 @id @default(autoincrement())
-  body       String
+  content    String
   embedding  Unsupported("vector")?
   botId      BigInt?
   questionId BigInt?
+  metadata   Json?
 }

@@ -29,7 +29,7 @@ async function randomQ(answeredQs: {questionId: bigint | null}[]) {
   return question
 }
 
-async function addEmbeddings (questionId: bigint) {
+async function addEmbeddings (questionId: bigint, botId: bigint) {
 
   const qanda = await prismadb.answers.findMany({where: {questionId: questionId}, select: {question: true, answer: true}})
   const convo = qanda[0].question as string + " " + qanda[0].answer + " " + qanda[1].question + " " + qanda[1].answer
@@ -42,11 +42,11 @@ async function addEmbeddings (questionId: bigint) {
     client: client, tableName: "documents", queryName: "match_documents",
   });
 
-  const doc1: Document = {pageContent: convo, metadata: {source: "testing"}}
-  await vectorStore.addDocuments([doc1]);
+  const doc1: Document = {pageContent: convo, metadata: {botId: botId}}
+  const newIds = await vectorStore.addDocuments([doc1]);
 
-  // await prismadb.documents.create({data: {botId: 1, questionId: questionId, body: convo}})
-  // use prismadb to update botid and questionid
+  // questionId throwing an error for some reason
+  await prismadb.documents.update({where: {id: Number(newIds[0])}, data: {botId: botId}})
 }
 
 export const POST = async (req: NextRequest) => {
@@ -168,7 +168,7 @@ export const POST = async (req: NextRequest) => {
         const resp = fuQ.choices[0].message.content as string
         await bot.api.sendMessage(chatId, resp)
 
-        await prismadb.answers.create({data: {botId: 1, questionId: cuserStatus.questionId, 
+        await prismadb.answers.create({data: {botId: botId[0].id, questionId: cuserStatus.questionId, 
           question: cuserStatus.question, answer: message}})
         await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {question: resp}})
 
@@ -179,11 +179,11 @@ export const POST = async (req: NextRequest) => {
 
         if (question!==null) {
           await bot.api.sendMessage(chatId, question.question as string)
-          await prismadb.answers.create({data: {botId: 1, questionId: cuserStatus.questionId, 
+          await prismadb.answers.create({data: {botId: botId[0].id, questionId: cuserStatus.questionId, 
             question: cuserStatus.question, answer: message}})
 
           if (cuserStatus.questionId!==null) {
-            await addEmbeddings(cuserStatus.questionId) // embed the entire convo id here
+            await addEmbeddings(cuserStatus.questionId, botId[0].id) // embed the entire convo id here
           }
 
           await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {questionId: question.id, question: question.question}})
@@ -220,14 +220,6 @@ export const POST = async (req: NextRequest) => {
         });
 
         // const retriever = vectorStore.asRetriever({filter: (rpc: SupabaseFilter) => rpc.filter("metadata->>repHandle", "eq", rep.repHandle)});
-
-        /*
-        const repQ = await openai.chat.completions.create({
-          messages: [{ role: "system", content: "Give a very short reply to the user's question."},
-              {role: "user", content: message }],
-          model: 'gpt-4o-mini', })
-        const resp = repQ.choices[0].message.content as string
-        */
         await bot.api.sendMessage(chatId, resp)
       }
 
