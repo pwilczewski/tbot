@@ -76,6 +76,8 @@ async function addEmbeddings (questionId: bigint, botId: bigint) {
   const doc1: Document = {pageContent: convo, metadata: {botId: botId}}
   const newIds = await vectorStore.addDocuments([doc1]);
 
+  console.log(botId)
+
   // questionId throwing an error for some reason
   await prismadb.documents.update({where: {id: Number(newIds[0])}, data: {botId: botId}})
 }
@@ -119,6 +121,8 @@ export const POST = async (req: NextRequest) => {
   bot.use(setStatus);
 
   // add documentation for available commands here
+  // who am I?
+  // suggest topics, tell me about yourself
   bot.command("start", 
     async (ctx) => {
       const chatId = ctx.chatId;
@@ -146,7 +150,7 @@ export const POST = async (req: NextRequest) => {
     if (isOwner===false) {
       await bot.api.sendMessage(chatId, "Only the bot's owner can train")
     } else {
-      await bot.api.sendMessage(chatId, "Retrieving questions")
+      await bot.api.sendMessage(chatId, "Training mode enabled")
       const answeredQs = await prismadb.answers.findMany({ where: {botId: botId[0].id} , 
         select: {questionId: true}, distinct: ['questionId']})      
       const question = await randomQ(answeredQs);
@@ -165,7 +169,7 @@ export const POST = async (req: NextRequest) => {
   // don't do too many commands! can show diff info for train / chat
   bot.command("skip", async (ctx) => {
     const chatId = ctx.chatId;
-    await bot.api.sendMessage(chatId, "Retrieving questions")
+    await bot.api.sendMessage(chatId, "Retrieving new question")
     const answeredQs = await prismadb.answers.findMany({ where: {botId: botId[0].id} , 
       select: {questionId: true}, distinct: ['questionId']})
     const question = await randomQ(answeredQs);
@@ -220,7 +224,6 @@ export const POST = async (req: NextRequest) => {
           await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {questionId: question.id, question: question.question}})
         }
       } else if (cuserStatus.status==="chat") {
-
         const resp = await chatReply(message)
         await bot.api.sendMessage(chatId, resp)
       }
