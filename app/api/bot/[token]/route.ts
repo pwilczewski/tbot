@@ -73,17 +73,10 @@ async function addEmbeddings (questionId: number, botId: number) {
     client: client, tableName: "documents", queryName: "match_documents",
   });
 
-  console.log("pre-document")
-
   const doc1: Document = {pageContent: convo, metadata: {botId: botId}}
   const newIds = await vectorStore.addDocuments([doc1]);
 
-  console.log(Number(newIds[0]))
-  console.log(botId)
-
-  // questionId throwing an error for some reason
-  const updates = await prismadb.documents.update({where: {id: Number(newIds[0])}, data: {botId: botId}})
-  console.log(updates)
+  await prismadb.documents.update({where: {id: Number(newIds[0])}, data: {botId: botId, questionId: questionId}})
 }
 
 export const POST = async (req: NextRequest) => {
@@ -171,6 +164,7 @@ export const POST = async (req: NextRequest) => {
 
   // what other commands? help? restart? chat? info? clear?
   // don't do too many commands! can show diff info for train / chat
+  // if it's a followup do the embedding!
   bot.command("skip", async (ctx) => {
     const chatId = ctx.chatId;
     await bot.api.sendMessage(chatId, "Retrieving new question")
@@ -180,6 +174,10 @@ export const POST = async (req: NextRequest) => {
 
     if (question !== null) {
       if (cuserStatus!==null) {
+        // add embeddings if it's a follow up
+        if (cuserStatus.status==="followup" && cuserStatus.questionId!==null) {
+          await addEmbeddings(cuserStatus.questionId, botId[0].id)
+        }
         await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
           data: {status: "question", question: question.question as string, questionId: question.id}})
       }
@@ -221,7 +219,6 @@ export const POST = async (req: NextRequest) => {
           await prismadb.answers.create({data: {botId: botId[0].id, questionId: cuserStatus.questionId, 
             question: cuserStatus.question, answer: message}})
 
-          console.log("pre-embeddings")
           if (cuserStatus.questionId!==null) {
             await addEmbeddings(cuserStatus.questionId, botId[0].id) // embed the entire convo id here
           }
