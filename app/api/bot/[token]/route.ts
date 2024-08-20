@@ -207,6 +207,8 @@ export const POST = async (req: NextRequest) => {
         const llm = new ChatOpenAI({ model: "gpt-4o-mini", temperature: 0 });
         const retrievedDocs = await retriever.invoke(message);
 
+        console.log(retrievedDocs)
+
         const ragChain = await createStuffDocumentsChain({
           llm, prompt,
           outputParser: new StringOutputParser(),
