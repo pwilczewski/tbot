@@ -205,15 +205,15 @@ export const POST = async (req: NextRequest) => {
         );
 
         const llm = new ChatOpenAI({ model: "gpt-4o-mini", temperature: 0 });
-        const retrievedDocs = await retriever.invoke("what is task decomposition");
-        
+        const retrievedDocs = await retriever.invoke(message);
+
         const ragChain = await createStuffDocumentsChain({
           llm, prompt,
           outputParser: new StringOutputParser(),
         });
 
         const resp = await ragChain.invoke({
-          question: "What is task decomposition?",
+          question: message,
           context: retrievedDocs,
         });
 
