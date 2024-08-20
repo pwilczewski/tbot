@@ -76,10 +76,12 @@ async function addEmbeddings (questionId: bigint, botId: bigint) {
   const doc1: Document = {pageContent: convo, metadata: {botId: botId}}
   const newIds = await vectorStore.addDocuments([doc1]);
 
+  console.log(Number(newIds[0]))
   console.log(botId)
 
   // questionId throwing an error for some reason
-  await prismadb.documents.update({where: {id: Number(newIds[0])}, data: {botId: botId}})
+  const updates = await prismadb.documents.update({where: {id: Number(newIds[0])}, data: {botId: botId}})
+  console.log(updates)
 }
 
 export const POST = async (req: NextRequest) => {
