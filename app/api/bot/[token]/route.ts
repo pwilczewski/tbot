@@ -73,6 +73,8 @@ async function addEmbeddings (questionId: bigint, botId: bigint) {
     client: client, tableName: "documents", queryName: "match_documents",
   });
 
+  console.log("pre-document")
+
   const doc1: Document = {pageContent: convo, metadata: {botId: botId}}
   const newIds = await vectorStore.addDocuments([doc1]);
 
@@ -219,6 +221,7 @@ export const POST = async (req: NextRequest) => {
           await prismadb.answers.create({data: {botId: botId[0].id, questionId: cuserStatus.questionId, 
             question: cuserStatus.question, answer: message}})
 
+          console.log("pre-embeddings")
           if (cuserStatus.questionId!==null) {
             await addEmbeddings(cuserStatus.questionId, botId[0].id) // embed the entire convo id here
           }
