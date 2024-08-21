@@ -5,7 +5,7 @@ import prismadb from "@/lib/prismadb";
 import { userStatus, users } from "@prisma/client";
 import { NextRequest } from "next/server";
 import { createClient } from '@supabase/supabase-js'
-import { SupabaseVectorStore } from "@langchain/community/vectorstores/supabase";
+import { SupabaseFilter, SupabaseVectorStore } from "@langchain/community/vectorstores/supabase";
 import { OpenAIEmbeddings, ChatOpenAI } from "@langchain/openai";
 import type { Document } from "@langchain/core/documents";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
@@ -14,12 +14,14 @@ import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
 
 const openai = new OpenAI();
 
-async function chatReply (message: string) {
+async function chatReply (message: string, botId: number) {
   const client = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, 
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string)
   const embeddings = new OpenAIEmbeddings();
   const vectorStore = new SupabaseVectorStore(embeddings, {client, tableName: "documents",});
-  const retriever = vectorStore.asRetriever();
+  //const retriever = vectorStore.asRetriever();
+  const retriever = vectorStore.asRetriever({filter: (rpc: SupabaseFilter) => 
+    rpc.filter("metadata->>botId", "eq", botId)});
 
   // add name of bot owner, can I use format thing?
   // do I add chat history?
@@ -41,7 +43,6 @@ async function chatReply (message: string) {
     question: message, context: retrievedDocs,
   });
 
-  // const retriever = vectorStore.asRetriever({filter: (rpc: SupabaseFilter) => rpc.filter("metadata->>repHandle", "eq", rep.repHandle)});
   return resp
 }
 
@@ -73,7 +74,7 @@ async function addEmbeddings (questionId: number, botId: number) {
     client: client, tableName: "documents", queryName: "match_documents",
   });
 
-  const doc1: Document = {pageContent: convo, metadata: {botId: botId}}
+  const doc1: Document = {pageContent: convo, metadata: {botId: botId, questionId: questionId}}
   const newIds = await vectorStore.addDocuments([doc1]);
 
   await prismadb.documents.update({where: {id: Number(newIds[0])}, data: {botId: botId, questionId: questionId}})
@@ -226,7 +227,7 @@ export const POST = async (req: NextRequest) => {
           await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {questionId: question.id, question: question.question}})
         }
       } else if (cuserStatus.status==="chat") {
-        const resp = await chatReply(message)
+        const resp = await chatReply(message, botId[0].id)
         await bot.api.sendMessage(chatId, resp)
       }
 
