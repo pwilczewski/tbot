@@ -14,7 +14,7 @@ import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
 
 const openai = new OpenAI();
 
-async function chatReply (message: string, botId: number) {
+async function chatReply (message: string, botId: number, botName: string) {
   const client = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, 
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string)
   const embeddings = new OpenAIEmbeddings();
@@ -23,10 +23,9 @@ async function chatReply (message: string, botId: number) {
   const retriever = vectorStore.asRetriever({filter: (rpc: SupabaseFilter) => 
     rpc.filter("metadata->>botId", "eq", botId)});
 
-  // add name of bot owner, can I use format thing?
   // do I add chat history?
   const prompt = ChatPromptTemplate.fromTemplate(
-    `You are answering questions on behalf of Paul.
+    `You are answering questions on behalf of {name}.
     Answer in the first person using the context available. 
     If the answer is not available in the context don't make up an answer just reply: I don't know. \n
     Context\n{context}\n Question:\n{question}`
@@ -40,7 +39,7 @@ async function chatReply (message: string, botId: number) {
   });
 
   const resp = await ragChain.invoke({
-    question: message, context: retrievedDocs,
+    name: botName, question: message, context: retrievedDocs,
   });
 
   return resp
@@ -88,7 +87,7 @@ export const POST = async (req: NextRequest) => {
   let dbUser: users | null;
   let cuserStatus: userStatus | null;
   let isOwner: boolean | null;
-  const botId = await prismadb.bots.findMany({where: {token: token}, select: {id: true}})
+  const botInfo = await prismadb.bots.findMany({where: {token: token}, select: {id: true, name: true}})
   
   bot.use(limit());
   
@@ -149,7 +148,7 @@ export const POST = async (req: NextRequest) => {
       await bot.api.sendMessage(chatId, "Only the bot's owner can train")
     } else {
       await bot.api.sendMessage(chatId, "Training mode enabled")
-      const answeredQs = await prismadb.answers.findMany({ where: {botId: botId[0].id} , 
+      const answeredQs = await prismadb.answers.findMany({ where: {botId: botInfo[0].id} , 
         select: {questionId: true}, distinct: ['questionId']})      
       const question = await randomQ(answeredQs);
   
@@ -169,7 +168,7 @@ export const POST = async (req: NextRequest) => {
   bot.command("skip", async (ctx) => {
     const chatId = ctx.chatId;
     await bot.api.sendMessage(chatId, "Retrieving new question")
-    const answeredQs = await prismadb.answers.findMany({ where: {botId: botId[0].id} , 
+    const answeredQs = await prismadb.answers.findMany({ where: {botId: botInfo[0].id} , 
       select: {questionId: true}, distinct: ['questionId']})
     const question = await randomQ(answeredQs);
 
@@ -177,7 +176,7 @@ export const POST = async (req: NextRequest) => {
       if (cuserStatus!==null) {
         // add embeddings if it's a follow up
         if (cuserStatus.status==="followup" && cuserStatus.questionId!==null) {
-          await addEmbeddings(cuserStatus.questionId, botId[0].id)
+          await addEmbeddings(cuserStatus.questionId, botInfo[0].id)
         }
         await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
           data: {status: "question", question: question.question as string, questionId: question.id}})
@@ -206,28 +205,28 @@ export const POST = async (req: NextRequest) => {
         const resp = fuQ.choices[0].message.content as string
         await bot.api.sendMessage(chatId, resp)
 
-        await prismadb.answers.create({data: {botId: botId[0].id, questionId: cuserStatus.questionId, 
+        await prismadb.answers.create({data: {botId: botInfo[0].id, questionId: cuserStatus.questionId, 
           question: cuserStatus.question, answer: message}})
         await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {question: resp}})
 
       } else if (cuserStatus.status==="followup") {
-        const answeredQs = await prismadb.answers.findMany({ where: {botId: botId[0].id} , 
+        const answeredQs = await prismadb.answers.findMany({ where: {botId: botInfo[0].id} , 
           select: {questionId: true}, distinct: ['questionId']})
         const question = await randomQ(answeredQs);
 
         if (question!==null) {
           await bot.api.sendMessage(chatId, question.question as string)
-          await prismadb.answers.create({data: {botId: botId[0].id, questionId: cuserStatus.questionId, 
+          await prismadb.answers.create({data: {botId: botInfo[0].id, questionId: cuserStatus.questionId, 
             question: cuserStatus.question, answer: message}})
 
           if (cuserStatus.questionId!==null) {
-            await addEmbeddings(cuserStatus.questionId, botId[0].id) // embed the entire convo id here
+            await addEmbeddings(cuserStatus.questionId, botInfo[0].id) // embed the entire convo id here
           }
 
           await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {questionId: question.id, question: question.question}})
         }
       } else if (cuserStatus.status==="chat") {
-        const resp = await chatReply(message, botId[0].id)
+        const resp = await chatReply(message, botInfo[0].id, botInfo[0].name as string)
         await bot.api.sendMessage(chatId, resp)
       }
 

@@ -51,6 +51,7 @@ model bots {
   created_at DateTime @default(now()) @db.Timestamptz(6)
   token      String?
   owner      String?
+  name       String?
 }
 
 model documents {
