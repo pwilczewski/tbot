@@ -79,6 +79,14 @@ async function addEmbeddings (questionId: number, botId: number) {
   await prismadb.documents.update({where: {id: Number(newIds[0])}, data: {botId: botId, questionId: questionId}})
 }
 
+const userStart = `Test1
+Test2
+ Test3`
+
+const ownerStart = `Testing1
+testing2
+testing3`
+
 export const POST = async (req: NextRequest) => {
 
   // parse url to get BOT_TOKEN
@@ -125,11 +133,9 @@ export const POST = async (req: NextRequest) => {
       const chatId = ctx.chatId;
 
       if ( isOwner===false ) {
-        await bot.api.sendMessage(chatId, "User start")
+        await bot.api.sendMessage(chatId, userStart)
       } else {
-        await bot.api.sendMessage(chatId, `Owner start 
-          Testing1
-          Testing3`)
+        await bot.api.sendMessage(chatId, ownerStart)
       }
   });
 
