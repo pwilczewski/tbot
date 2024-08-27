@@ -20,10 +20,9 @@ async function suggestTopics(botId: number) {
   const sugTopics = await prismadb.documents.findMany({where: {botId: botId}, select: {content: true}})
   const randTopics = sugTopics.sort(() => Math.random() - 0.5).slice(0,3);
   const qaPairs = randTopics[0].content + " \n" + randTopics[1].content + " \n" + randTopics[2].content
-  console.log(qaPairs)
 
   const fuQ = await openai.chat.completions.create({
-    messages: [{ role: "system", content: "Summarize the user's question and answer pairs as three short bullet points."},
+    messages: [{ role: "system", content: "Summarize the user's question and answer pairs as three bullet points, give just a few words for each."},
         {role: "user", content: qaPairs}],
     model: 'gpt-4o-mini', })
   const resp = fuQ.choices[0].message.content as string
