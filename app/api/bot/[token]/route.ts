@@ -14,16 +14,29 @@ import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
 
 const openai = new OpenAI();
 
+// select 3 random answers from documents and summarize them as bullet points
+async function suggestTopics(botId: number) {
+
+  const sugTopics = await prismadb.documents.findMany({where: {botId: botId}, select: {content: true}})
+  const randTopics = sugTopics.sort(() => Math.random() - 0.5).slice(0,3);
+
+  const fuQ = await openai.chat.completions.create({
+    messages: [{ role: "system", content: "Summarize the following question and answer pairs as three short bullet points."},
+        {role: "user", content: randTopics.join(" \n")}],
+    model: 'gpt-4o-mini', })
+  const resp = fuQ.choices[0].message.content as string
+  return resp
+}
+
 async function chatReply (message: string, botId: number, botName: string) {
   const client = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, 
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string)
   const embeddings = new OpenAIEmbeddings();
   const vectorStore = new SupabaseVectorStore(embeddings, {client, tableName: "documents",});
-  //const retriever = vectorStore.asRetriever();
   const retriever = vectorStore.asRetriever({filter: (rpc: SupabaseFilter) => 
     rpc.filter("metadata->>botId", "eq", botId)});
 
-  // do I add chat history?
+  // add chat history
   const prompt = ChatPromptTemplate.fromTemplate(
     `You are answering questions on behalf of {name}.
     Answer in the first person using the context available. 
@@ -145,6 +158,14 @@ export const POST = async (req: NextRequest) => {
       await prismadb.userStatus.update({ where: {id: cuserStatus.id}, data: {status: "chat"} })
     }
   });
+
+  bot.command("topics", async (ctx) => {
+    const chatId = ctx.chatId;
+    if (cuserStatus!==null && cuserStatus.status=="chat") {
+      const topics = await suggestTopics(botInfo[0].id);
+      await bot.api.sendMessage(chatId, topics);
+    }
+  })
   
   // only owner can enter train status
   bot.command("train", async (ctx) => {
