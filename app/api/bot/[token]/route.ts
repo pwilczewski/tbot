@@ -79,13 +79,14 @@ async function addEmbeddings (questionId: number, botId: number) {
   await prismadb.documents.update({where: {id: Number(newIds[0])}, data: {botId: botId, questionId: questionId}})
 }
 
-const userStart = `Test1
-Test2
- Test3`
+const userStart = `Welcome to Paul's bot.
+I've been trained to answer questions on behalf of Paul.
+You can use the /topics command for suggestions of conversation topics.`
 
-const ownerStart = `Testing1
-testing2
-testing3`
+// what commands? suggest? 
+const ownerStart = `Welcome to Paul's bot.
+I've been trained to answer questions on behalf of Paul.
+You can use the /topics command for suggestions of conversation topics.`
 
 export const POST = async (req: NextRequest) => {
 
@@ -125,9 +126,6 @@ export const POST = async (req: NextRequest) => {
   
   bot.use(setStatus);
 
-  // add documentation for available commands here
-  // who am I?
-  // suggest topics, tell me about yourself
   bot.command("start", 
     async (ctx) => {
       const chatId = ctx.chatId;
@@ -170,28 +168,28 @@ export const POST = async (req: NextRequest) => {
     }
   });
 
-  // what other commands? help? restart? chat? info? clear?
-  // don't do too many commands! can show diff info for train / chat
-  // if it's a followup do the embedding!
+  // test if the skipping the followup embeds the answer
   bot.command("skip", async (ctx) => {
     const chatId = ctx.chatId;
-    await bot.api.sendMessage(chatId, "Retrieving new question")
-    const answeredQs = await prismadb.answers.findMany({ where: {botId: botInfo[0].id} , 
-      select: {questionId: true}, distinct: ['questionId']})
-    const question = await randomQ(answeredQs);
+    if (cuserStatus!==null && cuserStatus.status!=="chat") {
+      await bot.api.sendMessage(chatId, "Retrieving new question")
+      const answeredQs = await prismadb.answers.findMany({ where: {botId: botInfo[0].id} , 
+        select: {questionId: true}, distinct: ['questionId']})
+      const question = await randomQ(answeredQs);
 
-    if (question !== null) {
-      if (cuserStatus!==null) {
-        // add embeddings if it's a follow up
-        if (cuserStatus.status==="followup" && cuserStatus.questionId!==null) {
-          await addEmbeddings(cuserStatus.questionId, botInfo[0].id)
+      if (question !== null) {
+        if (cuserStatus!==null) {
+          // add embeddings if it's a follow up
+          if (cuserStatus.status==="followup" && cuserStatus.questionId!==null) {
+            await addEmbeddings(cuserStatus.questionId, botInfo[0].id)
+          }
+          await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
+            data: {status: "question", question: question.question as string, questionId: question.id}})
         }
-        await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
-          data: {status: "question", question: question.question as string, questionId: question.id}})
+        await bot.api.sendMessage(chatId, question.question as string)
+      } else {
+        await bot.api.sendMessage(chatId, "No further questions")
       }
-      await bot.api.sendMessage(chatId, question.question as string)
-    } else {
-      await bot.api.sendMessage(chatId, "No further questions")
     }
   })
   
