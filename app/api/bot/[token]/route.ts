@@ -17,8 +17,12 @@ const openai = new OpenAI();
 // select 3 random answers from documents and summarize them as bullet points
 async function suggestTopics(botId: number) {
 
+  console.log("suggesting")
+
   const sugTopics = await prismadb.documents.findMany({where: {botId: botId}, select: {content: true}})
   const randTopics = sugTopics.sort(() => Math.random() - 0.5).slice(0,3);
+
+  console.log(randTopics)
 
   const fuQ = await openai.chat.completions.create({
     messages: [{ role: "system", content: "Summarize the following question and answer pairs as three short bullet points."},
@@ -161,7 +165,7 @@ export const POST = async (req: NextRequest) => {
 
   bot.command("topics", async (ctx) => {
     const chatId = ctx.chatId;
-    if (cuserStatus!==null && cuserStatus.status=="chat") {
+    if (cuserStatus!==null && cuserStatus.status==="chat") {
       const topics = await suggestTopics(botInfo[0].id);
       await bot.api.sendMessage(chatId, topics);
     }
