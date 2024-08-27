@@ -127,7 +127,9 @@ export const POST = async (req: NextRequest) => {
       if ( isOwner===false ) {
         await bot.api.sendMessage(chatId, "User start")
       } else {
-        await bot.api.sendMessage(chatId, "Owner start \n Testing")
+        await bot.api.sendMessage(chatId, `Owner start 
+          Testing1
+          Testing3`)
       }
   });
 
