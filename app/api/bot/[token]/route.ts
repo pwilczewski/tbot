@@ -66,10 +66,10 @@ async function randomQ(answeredQs: {questionId: number | null}[]) {
   if (answeredQs!==null) {
     excludeQs = answeredQs.map(item => item.questionId).filter((id): id is number => id !== null);
   }
-  const count = await prismadb.basedQuestions.count({where: {questionCategory: "intro", id: {notIn: excludeQs}}});
+  const count = await prismadb.basedQuestions.count({where: {questionCategory: "demo", id: {notIn: excludeQs}}});
   const randomOffset = Math.floor(Math.random() * count);
   const question = await prismadb.basedQuestions.findFirst({ 
-    where: {questionCategory: "intro", id: {notIn: excludeQs}}, skip: randomOffset})
+    where: {questionCategory: "demo", id: {notIn: excludeQs}}, skip: randomOffset})
 
   return question
 }
