@@ -152,8 +152,10 @@ export const POST = async (req: NextRequest) => {
   });
 
   // switch to chat status, user is always in chat status
+  // add a message that we're here...
   bot.command("chat", async (ctx) => {
     const chatId = ctx.chatId;
+    await bot.api.sendMessage(chatId, "Chat mode enabled")
     if (cuserStatus!==null) {
       // should I clear questions here?
       await prismadb.userStatus.update({ where: {id: cuserStatus.id}, data: {status: "chat"} })
