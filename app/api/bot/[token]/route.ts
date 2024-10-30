@@ -199,7 +199,9 @@ export const POST = async (req: NextRequest) => {
       await bot.api.sendMessage(chatId, "Retrieving new question")
       const answeredQs = await prismadb.answers.findMany({ where: {botId: botInfo[0].id} , 
         select: {questionId: true}, distinct: ['questionId']})
+      console.log(answeredQs)
       const question = await randomQ(answeredQs);
+      console.log(question)
 
       if (question !== null) {
         if (cuserStatus!==null) {
