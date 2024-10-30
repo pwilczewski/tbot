@@ -76,8 +76,13 @@ async function randomQ(answeredQs: {questionId: number | null}[]) {
 
 async function addEmbeddings (questionId: number, botId: number) {
 
+  let convo: string;
   const qanda = await prismadb.answers.findMany({where: {questionId: questionId}, select: {question: true, answer: true}})
-  const convo = qanda[0].question as string + " " + qanda[0].answer + " " + qanda[1].question + " " + qanda[1].answer
+  if (qanda.length===1) {
+    convo = qanda[0].question as string + " " + qanda[0].answer
+  } else {
+    convo = qanda[0].question as string + " " + qanda[0].answer + " " + qanda[1].question + " " + qanda[1].answer
+  }
 
   const client = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, 
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string)
@@ -202,12 +207,9 @@ export const POST = async (req: NextRequest) => {
       const question = await randomQ(answeredQs);
 
       if (question !== null) {
-        console.log("if 1")
         if (cuserStatus!==null) {
-          console.log("if 2")
           // add embeddings if it's a follow up
           if (cuserStatus.status==="followup" && cuserStatus.questionId!==null) {
-            console.log("if 3")
             await addEmbeddings(cuserStatus.questionId, botInfo[0].id)
           }
           console.log("if 4")
