@@ -199,16 +199,18 @@ export const POST = async (req: NextRequest) => {
       await bot.api.sendMessage(chatId, "Retrieving new question")
       const answeredQs = await prismadb.answers.findMany({ where: {botId: botInfo[0].id} , 
         select: {questionId: true}, distinct: ['questionId']})
-      console.log(answeredQs)
       const question = await randomQ(answeredQs);
-      console.log(question)
 
       if (question !== null) {
+        console.log("if 1")
         if (cuserStatus!==null) {
+          console.log("if 2")
           // add embeddings if it's a follow up
           if (cuserStatus.status==="followup" && cuserStatus.questionId!==null) {
+            console.log("if 3")
             await addEmbeddings(cuserStatus.questionId, botInfo[0].id)
           }
+          console.log("if 4")
           await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
             data: {status: "question", question: question.question as string, questionId: question.id}})
         }
