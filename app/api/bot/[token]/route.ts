@@ -63,24 +63,42 @@ async function chatReply (message: string, botId: number, botName: string) {
   return resp
 }
 
-// definitely possible that there are no questions answered and answeredQs comes in as null
-async function randomQ(answeredQs: {questionId: number | null}[]) {
+async function randomQ(answeredQs: {questionId: number | null}[], cuserStatus: userStatus | null) {
 
   let excludeQs: number[] = [];
   if (answeredQs!==null) {
     excludeQs = answeredQs.map(item => item.questionId).filter((id): id is number => id !== null);
   }
-  const count = await prismadb.basedQuestions.count({where: {questionLevel: 1, id: {notIn: excludeQs}}});
+
+  let userQLevel: number = 0;
+  if (cuserStatus!==null) {
+    userQLevel = cuserStatus.questionLevel as number
+  }
+
+  let count = await prismadb.basedQuestions.count({where: {questionLevel: userQLevel, id: {notIn: excludeQs}}});
+
+  // if all questions have been answered or skipped, advance level
+  if (count===0) {
+    if (cuserStatus!==null) {
+      if (cuserStatus.questionLevel as number < 5) {
+        await prismadb.userStatus.update({ where: {id: cuserStatus.id}, data: {questionLevel: cuserStatus.questionLevel as number + 1} })
+      }
+    }
+
+    count = await prismadb.basedQuestions.count({where: {questionLevel: userQLevel, id: {notIn: excludeQs}}})
+  }
+
   const randomOffset = Math.floor(Math.random() * count);
   const question = await prismadb.basedQuestions.findFirst({ 
-    where: {questionLevel: 1, id: {notIn: excludeQs}}, skip: randomOffset})
+    where: {questionLevel: userQLevel, id: {notIn: excludeQs}}, skip: randomOffset})
 
   return question
 }
 
 async function addEmbeddings (questionId: number, botId: number) {
 
-  const qanda = await prismadb.answers.findMany({where: {questionId: questionId}, select: {question: true, answer: true}})
+  const qanda = await prismadb.answers.findMany({where: {questionId: questionId, skipped: false}, 
+    select: {question: true, answer: true}})
 
   // temporary solution, it should really handle a qanda of arbitrary length
   let convo: string;
@@ -191,7 +209,7 @@ export const POST = async (req: NextRequest) => {
       await bot.api.sendMessage(chatId, "Training mode enabled")
       const answeredQs = await prismadb.answers.findMany({ where: {botId: botInfo[0].id} , 
         select: {questionId: true}, distinct: ['questionId']})      
-      const question = await randomQ(answeredQs);
+      const question = await randomQ(answeredQs, cuserStatus);
   
       if (question !== null) {
         if (cuserStatus!==null) {
@@ -211,7 +229,7 @@ export const POST = async (req: NextRequest) => {
         question: cuserStatus.question, skipped: true }})
       const answeredQs = await prismadb.answers.findMany({ where: {botId: botInfo[0].id} , 
         select: {questionId: true}, distinct: ['questionId']})
-      const question = await randomQ(answeredQs);
+      const question = await randomQ(answeredQs, cuserStatus);
 
       if (question !== null) {
         if (cuserStatus!==null) {
@@ -250,7 +268,7 @@ export const POST = async (req: NextRequest) => {
       } else if (cuserStatus.status==="followup") {
         const answeredQs = await prismadb.answers.findMany({ where: {botId: botInfo[0].id} , 
           select: {questionId: true}, distinct: ['questionId']})
-        const question = await randomQ(answeredQs);
+        const question = await randomQ(answeredQs, cuserStatus);
 
         if (question!==null) {
           await bot.api.sendMessage(chatId, question.question as string)
