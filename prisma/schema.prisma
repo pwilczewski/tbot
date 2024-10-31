@@ -11,7 +11,7 @@ datasource db {
 model basedQuestions {
   created_at    DateTime? @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
   question      String?
-  questionLevel Int?
+  questionLevel Int
   id            Int       @id @default(autoincrement())
 }
 

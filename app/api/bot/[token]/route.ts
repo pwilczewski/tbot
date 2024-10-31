@@ -207,6 +207,8 @@ export const POST = async (req: NextRequest) => {
     const chatId = ctx.chatId;
     if (cuserStatus!==null && cuserStatus.status!=="chat") {
       await bot.api.sendMessage(chatId, "Retrieving new question")
+      await prismadb.answers.create({ data: {botId: botInfo[0].id, questionId: cuserStatus.questionId, 
+        question: cuserStatus.question, skipped: true }})
       const answeredQs = await prismadb.answers.findMany({ where: {botId: botInfo[0].id} , 
         select: {questionId: true}, distinct: ['questionId']})
       const question = await randomQ(answeredQs);
@@ -242,7 +244,7 @@ export const POST = async (req: NextRequest) => {
         await bot.api.sendMessage(chatId, resp)
 
         await prismadb.answers.create({data: {botId: botInfo[0].id, questionId: cuserStatus.questionId, 
-          question: cuserStatus.question, answer: message}})
+          question: cuserStatus.question, answer: message, skipped: false}})
         await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {question: resp}})
 
       } else if (cuserStatus.status==="followup") {
@@ -253,7 +255,7 @@ export const POST = async (req: NextRequest) => {
         if (question!==null) {
           await bot.api.sendMessage(chatId, question.question as string)
           await prismadb.answers.create({data: {botId: botInfo[0].id, questionId: cuserStatus.questionId, 
-            question: cuserStatus.question, answer: message}})
+            question: cuserStatus.question, answer: message, skipped: false}})
 
           if (cuserStatus.questionId!==null) {
             await addEmbeddings(cuserStatus.questionId, botInfo[0].id) // embed the entire convo id here
