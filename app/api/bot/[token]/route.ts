@@ -83,9 +83,9 @@ async function randomQ(answeredQs: {questionId: number | null}[], cuserStatus: u
       if (cuserStatus.questionLevel as number < 5) {
         await prismadb.userStatus.update({ where: {id: cuserStatus.id}, data: {questionLevel: cuserStatus.questionLevel as number + 1} })
       }
+      count = await prismadb.basedQuestions.count({where: {questionLevel: userQLevel, id: {notIn: excludeQs}}})
+      userQLevel = cuserStatus.questionLevel as number
     }
-
-    count = await prismadb.basedQuestions.count({where: {questionLevel: userQLevel, id: {notIn: excludeQs}}})
   }
 
   const randomOffset = Math.floor(Math.random() * count);
