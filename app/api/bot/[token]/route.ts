@@ -14,6 +14,8 @@ import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
 
 const openai = new OpenAI();
 
+ // move a lot of this stuff into functions to get my code cleaner
+
 // select 3 random answers from documents and summarize them as bullet points
 async function suggestTopics(botId: number) {
 
@@ -21,8 +23,10 @@ async function suggestTopics(botId: number) {
   const randTopics = sugTopics.sort(() => Math.random() - 0.5).slice(0,3);
   const qaPairs = randTopics[0].content + " \n" + randTopics[1].content + " \n" + randTopics[2].content
 
+  // better promptnig here
   const fuQ = await openai.chat.completions.create({
-    messages: [{ role: "system", content: "Summarize the user's question and answer pairs as three bullet points, give just a few words for each."},
+    messages: [{ role: "system", content:
+        "Summarize the user's question and answer pairs as three bullet points, give just a few words for each."},
         {role: "user", content: qaPairs}],
     model: 'gpt-4o-mini', })
   const resp = fuQ.choices[0].message.content as string
@@ -66,18 +70,20 @@ async function randomQ(answeredQs: {questionId: number | null}[]) {
   if (answeredQs!==null) {
     excludeQs = answeredQs.map(item => item.questionId).filter((id): id is number => id !== null);
   }
-  const count = await prismadb.basedQuestions.count({where: {questionCategory: "demo", id: {notIn: excludeQs}}});
+  const count = await prismadb.basedQuestions.count({where: {questionLevel: 1, id: {notIn: excludeQs}}});
   const randomOffset = Math.floor(Math.random() * count);
   const question = await prismadb.basedQuestions.findFirst({ 
-    where: {questionCategory: "demo", id: {notIn: excludeQs}}, skip: randomOffset})
+    where: {questionLevel: 1, id: {notIn: excludeQs}}, skip: randomOffset})
 
   return question
 }
 
 async function addEmbeddings (questionId: number, botId: number) {
 
-  let convo: string;
   const qanda = await prismadb.answers.findMany({where: {questionId: questionId}, select: {question: true, answer: true}})
+
+  // temporary solution, it should really handle a qanda of arbitrary length
+  let convo: string;
   if (qanda.length===1) {
     convo = qanda[0].question as string + " " + qanda[0].answer
   } else {
@@ -97,15 +103,6 @@ async function addEmbeddings (questionId: number, botId: number) {
 
   await prismadb.documents.update({where: {id: Number(newIds[0])}, data: {botId: botId, questionId: questionId}})
 }
-
-const userStart = `Welcome to Paul's bot.
-I've been trained to answer questions on behalf of Paul.
-You can use the /topics command for suggestions of conversation topics.`
-
-// what commands? suggest? 
-const ownerStart = `Welcome to Paul's bot.
-I've been trained to answer questions on behalf of Paul.
-You can use the /topics command for suggestions of conversation topics.`
 
 export const POST = async (req: NextRequest) => {
 
@@ -149,9 +146,18 @@ export const POST = async (req: NextRequest) => {
     async (ctx) => {
       const chatId = ctx.chatId;
 
+      const userStart = `Welcome to` + botInfo[0].name + `'s bot.
+        I've been trained to answer questions on behalf of` + botInfo[0].name + `.
+        You can use the /topics command for suggestions of conversation topics.`
+
+        const ownerStart = `Welcome to your bot.
+        You are currently in chat.
+        You can use the /train command for suggestions of conversation topics.`
+
       if ( isOwner===false ) {
         await bot.api.sendMessage(chatId, userStart)
       } else {
+        // set userStatus to chat here
         await bot.api.sendMessage(chatId, ownerStart)
       }
   });
@@ -197,7 +203,6 @@ export const POST = async (req: NextRequest) => {
     }
   });
 
-  // test if the skipping the followup embeds the answer
   bot.command("skip", async (ctx) => {
     const chatId = ctx.chatId;
     if (cuserStatus!==null && cuserStatus.status!=="chat") {
@@ -208,11 +213,9 @@ export const POST = async (req: NextRequest) => {
 
       if (question !== null) {
         if (cuserStatus!==null) {
-          // add embeddings if it's a follow up
           if (cuserStatus.status==="followup" && cuserStatus.questionId!==null) {
             await addEmbeddings(cuserStatus.questionId, botInfo[0].id)
           }
-          console.log("if 4")
           await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
             data: {status: "question", question: question.question as string, questionId: question.id}})
         }
@@ -223,13 +226,10 @@ export const POST = async (req: NextRequest) => {
     }
   })
   
-  // move a lot of this stuff into functions to get my code cleaner
   bot.on("message", async (ctx) => {
     // await ctx.reply("...");
     const message = ctx.message.text as string;
     const chatId = ctx.chatId;
-
-    // const botinfo = await bot.api.getMe()
 
     if (cuserStatus!==null) {
       // use AI to ask a follow up question
