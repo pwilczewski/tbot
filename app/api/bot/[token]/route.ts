@@ -261,7 +261,8 @@ export const POST = async (req: NextRequest) => {
 
     if (message.startsWith('/')) {
       const command = message.split(' ')[0];
-      ctx.reply(`Sorry, '${command}' is not a valid command. Type /help for a list of available commands.`);
+      await ctx.reply(`Sorry, '${command}' is not a valid command. Type /help for a list of available commands.`);
+      return
     }
 
     if (cuserStatus!==null) {
