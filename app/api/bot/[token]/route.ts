@@ -230,13 +230,10 @@ export const POST = async (req: NextRequest) => {
       const answeredQs = await prismadb.answers.findMany({ where: {botId: botInfo[0].id} , 
         select: {questionId: true}, distinct: ['questionId']})
       const question = await randomQ(answeredQs, cuserStatus);
-      console.log(question)
-      console.log(cuserStatus)
 
       if (question !== null) {
         if (cuserStatus!==null) {
           if (cuserStatus.status==="followup" && cuserStatus.questionId!==null) {
-            console.log("in embeddings")
             await addEmbeddings(cuserStatus.questionId, botInfo[0].id)
           }
           await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
@@ -248,11 +245,24 @@ export const POST = async (req: NextRequest) => {
       }
     }
   })
+
+  bot.command("help", async(ctx) => {
+    const chatId = ctx.chatId;
+    const userStart = `The available commands include:
+      /topics - suggest conversation topics.`
+    
+    bot.api.sendMessage(chatId, userStart)
+  })
   
   bot.on("message", async (ctx) => {
     // await ctx.reply("...");
     const message = ctx.message.text as string;
     const chatId = ctx.chatId;
+
+    if (message.startsWith('/')) {
+      const command = message.split(' ')[0];
+      ctx.reply(`Sorry, '${command}' is not a valid command. Type /help for a list of available commands.`);
+    }
 
     if (cuserStatus!==null) {
       // use AI to ask a follow up question
