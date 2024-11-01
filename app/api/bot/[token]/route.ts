@@ -230,10 +230,13 @@ export const POST = async (req: NextRequest) => {
       const answeredQs = await prismadb.answers.findMany({ where: {botId: botInfo[0].id} , 
         select: {questionId: true}, distinct: ['questionId']})
       const question = await randomQ(answeredQs, cuserStatus);
+      console.log(question)
+      console.log(cuserStatus)
 
       if (question !== null) {
         if (cuserStatus!==null) {
           if (cuserStatus.status==="followup" && cuserStatus.questionId!==null) {
+            console.log("in embeddings")
             await addEmbeddings(cuserStatus.questionId, botInfo[0].id)
           }
           await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
