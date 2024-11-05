@@ -1,4 +1,4 @@
-import { Bot, Context, NextFunction, webhookCallback } from "grammy";
+import { Bot, Context, GrammyError, HttpError, NextFunction, webhookCallback } from "grammy";
 import OpenAI from 'openai';
 import { limit } from "@grammyjs/ratelimiter";
 import prismadb from "@/lib/prismadb";
@@ -14,23 +14,30 @@ import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
 
 const openai = new OpenAI();
 
- // move a lot of this stuff into functions to get my code cleaner
+// move a lot of this stuff into functions to get my code cleaner
 
 // select 3 random answers from documents and summarize them as bullet points
 async function suggestTopics(botId: number) {
 
   const sugTopics = await prismadb.documents.findMany({where: {botId: botId}, select: {content: true}})
   const randTopics = sugTopics.sort(() => Math.random() - 0.5).slice(0,3);
-  const qaPairs = randTopics[0].content + " \n" + randTopics[1].content + " \n" + randTopics[2].content
+  if (randTopics.length >= 3) {
+    const qaPairs = randTopics[0].content + " \n" + randTopics[1].content + " \n" + randTopics[2].content
 
-  // better promptnig here
-  const fuQ = await openai.chat.completions.create({
-    messages: [{ role: "system", content:
-        "Summarize the user's question and answer pairs as three bullet points, give just a few words for each."},
-        {role: "user", content: qaPairs}],
-    model: 'gpt-4o-mini', })
-  const resp = fuQ.choices[0].message.content as string
-  return resp
+    // better prompting here
+    const fuQ = await openai.chat.completions.create({
+      messages: [{ role: "system", content:
+          // "Summarize the user's question and answer pairs as three bullet points, give just a few words for each."},
+          "Given the question answer pairs, find a few that would be interesting conversation topics. Summarize the topics as three bullet points, give just a few words for each."},
+          {role: "user", content: qaPairs}],
+      model: 'gpt-4o-mini', })
+    const resp = fuQ.choices[0].message.content as string
+    return resp
+  } else {
+    return "No suggestions available."
+  }
+
+
 }
 
 async function chatReply (message: string, botId: number, botName: string) {
@@ -164,13 +171,9 @@ export const POST = async (req: NextRequest) => {
     async (ctx) => {
       const chatId = ctx.chatId;
 
-      const userStart = `Welcome to` + botInfo[0].name + `'s bot.
-        I've been trained to answer questions on behalf of` + botInfo[0].name + `.
-        You can use the /topics command for suggestions of conversation topics.`
+      const userStart = `Welcome to` + botInfo[0].name + `'s bot. I've been trained to answer questions on behalf of` + botInfo[0].name + `. You can use the /topics command to suggest conversation topics.`
 
-        const ownerStart = `Welcome to your bot.
-        You are currently in chat.
-        You can use the /train command for suggestions of conversation topics.`
+        const ownerStart = `Welcome to your bot. You are currently in chat model. You can use the /train command to switch to training mode.`
 
       if ( isOwner===false ) {
         await bot.api.sendMessage(chatId, userStart)
@@ -248,8 +251,7 @@ export const POST = async (req: NextRequest) => {
 
   bot.command("help", async(ctx) => {
     const chatId = ctx.chatId;
-    const userStart = `The available commands include:
-      /topics - suggest conversation topics.`
+    const userStart = `Type /topics to suggest conversation topics.`
     
     bot.api.sendMessage(chatId, userStart)
   })
@@ -308,6 +310,19 @@ export const POST = async (req: NextRequest) => {
       }
     }
   });
+
+  bot.catch((err) => {
+    const ctx = err.ctx;
+    console.error(`Error while handling update ${ctx.update.update_id}:`);
+    
+    if (err instanceof GrammyError) {
+      console.error("Error in request:", err.description);
+    } else if (err instanceof HttpError) {
+      console.error("Could not contact Telegram:", err);
+    } else {
+      console.error("Unknown error:", err);
+    }
+  });  
 
   const handler = webhookCallback(bot, "std/http");
   return handler(req)
