@@ -32,8 +32,8 @@ async function suggestTopics(botId: number) {
             The user wants some interesting topics for conversation with you. 
             Paul has answered a series of questions below. 
             Based on these questions and answers, suggest some topics that Paul might be interested in or have opinions about.
-            Summarize these suggestions as three bullet points, give just a few words for each.
-            Make the suggestions interesting and incomplete to stimulate further conversation.`},
+            Summarize these suggestions as three bullet points, be very brief - give just a few words for each.
+            Don't just summarize the questions and answers, you want to stimulate further discussion.`},
           {role: "user", content: qaPairs}],
       model: 'gpt-4o-mini', })
     const resp = fuQ.choices[0].message.content as string
