@@ -46,11 +46,11 @@ async function suggestTopics(botId: number) {
 async function chatReply (message: string, botId: number, botName: string) {
   const client = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, 
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string)
-  const embeddings = new OpenAIEmbeddings();
+  const embeddings = new OpenAIEmbeddings({model: "text-embedding-3-small"});
   const vectorStore = new SupabaseVectorStore(embeddings, 
     {client, tableName: "documents", queryName: "match_documents",});
   const retriever = vectorStore.asRetriever({filter: (rpc: SupabaseFilter) => 
-    rpc.filter("metadata->>botId", "eq", botId), k: 3, verbose: true});
+    rpc.filter("metadata->>botId", "eq", botId), k: 3});
 
   // add chat history
   const prompt = ChatPromptTemplate.fromTemplate(
