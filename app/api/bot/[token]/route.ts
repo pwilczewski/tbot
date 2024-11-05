@@ -28,11 +28,13 @@ async function suggestTopics(botId: number) {
     const fuQ = await openai.chat.completions.create({
       messages: [{ role: "system", content:
           // "Summarize the user's question and answer pairs as three bullet points, give just a few words for each."},
-          `You are a chatbot representing Paul. 
-            The user just asked for some interesting topics for conversation. 
-            Paul has answered a series of questions below. 
-            Based on these questions and answers, suggest some topics that Paul might be interested in or have opinions about.
-            Summarize these suggestions as three bullet points, be very brief - give just a few words for each.`},
+          `You are a chatbot representing Paul.
+            The user just asked for some interesting topics for conversation.
+            Paul has answered a series of questions below.
+            Based on these answers, suggest some topics that Paul might be interested in or have opinions about.
+            Summarize these as three bullet points. 
+            Be very brief, give just a few words for each topic.
+            Keep the topics somewhat vague and illusive so that the user wants to know more.`},
           {role: "user", content: qaPairs}],
       model: 'gpt-4o-mini', })
     // Don't just summarize the questions and answers, you want to stimulate further discussion.
@@ -62,7 +64,6 @@ async function chatReply (message: string, botId: number, botName: string) {
 
   const llm = new ChatOpenAI({ model: "gpt-4o-mini", temperature: 0 });
   const retrievedDocs = await retriever.invoke(message);
-  console.log(retrievedDocs)
 
   const ragChain = await createStuffDocumentsChain({
     llm, prompt, outputParser: new StringOutputParser(),
@@ -189,7 +190,6 @@ export const POST = async (req: NextRequest) => {
   });
 
   // switch to chat status, user is always in chat status
-  // add a message that we're here...
   bot.command("chat", async (ctx) => {
     const chatId = ctx.chatId;
     await bot.api.sendMessage(chatId, "Chat mode enabled")
@@ -203,11 +203,10 @@ export const POST = async (req: NextRequest) => {
     const chatId = ctx.chatId;
     if (cuserStatus!==null && cuserStatus.status==="chat") {
       const topics = await suggestTopics(botInfo[0].id);
-      await bot.api.sendMessage(chatId, topics);
+      await bot.api.sendMessage(chatId, "Here are some topics you might want to ask about:\n" + topics);
     }
   })
   
-  // only owner can enter train status
   bot.command("train", async (ctx) => {
     const chatId = ctx.chatId;
 
