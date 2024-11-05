@@ -28,7 +28,12 @@ async function suggestTopics(botId: number) {
     const fuQ = await openai.chat.completions.create({
       messages: [{ role: "system", content:
           // "Summarize the user's question and answer pairs as three bullet points, give just a few words for each."},
-          "The user is asking for some interesting conversation topics. Based on the question and answer pairs below, identify three interesting conversation topics, summarize them as three bullet points and give just a few words for each."},
+          `You are a chatbot representing Paul. 
+            The user wants some interesting topics for conversation with you. 
+            Paul has answered a series of questions below. 
+            Based on these questions and answers, suggest some topics that Paul might be interested in or have opinions about.
+            Summarize these suggestions as three bullet points, give just a few words for each.
+            Make the suggestions interesting and incomplete to stimulate further conversation.`},
           {role: "user", content: qaPairs}],
       model: 'gpt-4o-mini', })
     const resp = fuQ.choices[0].message.content as string
@@ -36,8 +41,6 @@ async function suggestTopics(botId: number) {
   } else {
     return "No suggestions available."
   }
-
-
 }
 
 async function chatReply (message: string, botId: number, botName: string) {
