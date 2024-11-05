@@ -55,12 +55,13 @@ async function chatReply (message: string, botId: number, botName: string) {
   const prompt = ChatPromptTemplate.fromTemplate(
     `You are answering questions on behalf of {name}.
     Answer in the first person using the context available. 
-    If the answer is not available in the context don't make up an answer just reply: I don't know. \n
+    If the answer is not available in the context don't make up an answer just reply: I don't know.
     Context\n{context}\n Question:\n{question}`
   );
 
   const llm = new ChatOpenAI({ model: "gpt-4o-mini", temperature: 0 });
   const retrievedDocs = await retriever.invoke(message);
+  console.log(retrievedDocs)
 
   const ragChain = await createStuffDocumentsChain({
     llm, prompt, outputParser: new StringOutputParser(),
