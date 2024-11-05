@@ -28,7 +28,7 @@ async function suggestTopics(botId: number) {
     const fuQ = await openai.chat.completions.create({
       messages: [{ role: "system", content:
           // "Summarize the user's question and answer pairs as three bullet points, give just a few words for each."},
-          "Given the question answer pairs, find a few that would be interesting conversation topics. Summarize the topics as three bullet points, give just a few words for each."},
+          "The user is asking for some interesting conversation topics. Based on the question and answer pairs below, identify three interesting conversation topics, summarize them as three bullet points and give just a few words for each."},
           {role: "user", content: qaPairs}],
       model: 'gpt-4o-mini', })
     const resp = fuQ.choices[0].message.content as string
