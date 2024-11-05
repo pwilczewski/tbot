@@ -50,7 +50,7 @@ async function chatReply (message: string, botId: number, botName: string) {
   const vectorStore = new SupabaseVectorStore(embeddings, 
     {client, tableName: "documents", queryName: "match_documents",});
   const retriever = vectorStore.asRetriever({filter: (rpc: SupabaseFilter) => 
-    rpc.filter("metadata->>botId", "eq", botId), k: 3});
+    rpc.filter("metadata->>botId", "eq", botId), k: 3, verbose: true});
 
   // add chat history
   const prompt = ChatPromptTemplate.fromTemplate(
