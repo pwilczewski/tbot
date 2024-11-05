@@ -29,13 +29,13 @@ async function suggestTopics(botId: number) {
       messages: [{ role: "system", content:
           // "Summarize the user's question and answer pairs as three bullet points, give just a few words for each."},
           `You are a chatbot representing Paul. 
-            The user wants some interesting topics for conversation with you. 
+            The user just asked for some interesting topics for conversation. 
             Paul has answered a series of questions below. 
             Based on these questions and answers, suggest some topics that Paul might be interested in or have opinions about.
-            Summarize these suggestions as three bullet points, be very brief - give just a few words for each.
-            Don't just summarize the questions and answers, you want to stimulate further discussion.`},
+            Summarize these suggestions as three bullet points, be very brief - give just a few words for each.`},
           {role: "user", content: qaPairs}],
       model: 'gpt-4o-mini', })
+    // Don't just summarize the questions and answers, you want to stimulate further discussion.
     const resp = fuQ.choices[0].message.content as string
     return resp
   } else {
