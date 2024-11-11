@@ -255,7 +255,7 @@ export const POST = async (req: NextRequest) => {
 
   bot.command("about", async(ctx) => {
     const chatId = ctx.chatId;
-    bot.api.sendMessage(chatId, "A message from my creator... \n\n" + botInfo.)
+    bot.api.sendMessage(chatId, "A message from my creator... \n\n" + botInfo[0].aboutMe)
   })
 
   bot.command("help", async(ctx) => {
