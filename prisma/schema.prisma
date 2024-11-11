@@ -54,6 +54,7 @@ model bots {
   token      String?
   owner      String?
   name       String?
+  aboutMe    String?
 }
 
 model documents {

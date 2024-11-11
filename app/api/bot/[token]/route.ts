@@ -143,7 +143,7 @@ export const POST = async (req: NextRequest) => {
   let dbUser: users | null;
   let cuserStatus: userStatus | null;
   let isOwner: boolean | null;
-  const botInfo = await prismadb.bots.findMany({where: {token: token}, select: {id: true, name: true}})
+  const botInfo = await prismadb.bots.findMany({where: {token: token}, select: {id: true, name: true, aboutMe: true}})
   
   bot.use(limit());
   
@@ -177,7 +177,7 @@ export const POST = async (req: NextRequest) => {
     async (ctx) => {
       const chatId = ctx.chatId;
 
-      const userStart = `Welcome to` + botInfo[0].name + `'s bot. I've been trained to answer questions on behalf of` + botInfo[0].name + `. You can use the /topics command to suggest conversation topics.`
+      const userStart = `Welcome to` + botInfo[0].name + `'s bot. I've been trained to chat on behalf of` + botInfo[0].name + `. You can use the /topics command to suggest conversation topics.`
 
         const ownerStart = `Welcome to your bot. You are currently in chat model. You can use the /train command to switch to training mode.`
 
@@ -251,6 +251,11 @@ export const POST = async (req: NextRequest) => {
         await bot.api.sendMessage(chatId, "No further questions")
       }
     }
+  })
+
+  bot.command("about", async(ctx) => {
+    const chatId = ctx.chatId;
+    bot.api.sendMessage(chatId, "A message from my creator... \n\n" + botInfo.)
   })
 
   bot.command("help", async(ctx) => {
