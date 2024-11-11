@@ -259,7 +259,7 @@ export const POST = async (req: NextRequest) => {
     if (aboutMe!==null) {
       bot.api.sendMessage(chatId, `A message from my creator... \n\n` + botInfo[0].aboutMe);
     } else {
-      bot.api.sendMessage(chatId, `My creator has nothing to say here.`
+      bot.api.sendMessage(chatId, `My creator has nothing to say here.`);
     }
     
   })
