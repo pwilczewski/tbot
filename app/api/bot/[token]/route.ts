@@ -255,7 +255,13 @@ export const POST = async (req: NextRequest) => {
 
   bot.command("about", async(ctx) => {
     const chatId = ctx.chatId;
-    bot.api.sendMessage(chatId, "A message from my creator... \n\n" + botInfo[0].aboutMe)
+    const aboutMe = botInfo[0].aboutMe;
+    if (aboutMe!==null) {
+      bot.api.sendMessage(chatId, `A message from my creator... \n\n` + botInfo[0].aboutMe);
+    } else {
+      bot.api.sendMessage(chatId, `My creator has nothing to say here.`
+    }
+    
   })
 
   bot.command("help", async(ctx) => {
