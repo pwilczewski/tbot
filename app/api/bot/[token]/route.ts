@@ -99,8 +99,8 @@ export const POST = async (req: NextRequest) => {
   bot.command("skip", async (ctx) => {
     const chatId = ctx.chatId;
     if (cuserStatus.status!=="chat") {
-      const trainingStatus = await prismadb.trainingStatus.findMany({
-        where: {botId: botInfo[0].id}})
+      const trainingStatus = await prismadb.trainingStatus.findMany({where: {botId: botInfo[0].id}})
+      console.log(trainingStatus)
       await bot.api.sendMessage(chatId, "Retrieving new question")
       await prismadb.answers.create({ data: {botId: botInfo[0].id, questionId: trainingStatus[0].questionId, 
         question: trainingStatus[0].question, skipped: true }})
