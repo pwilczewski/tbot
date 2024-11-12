@@ -12,21 +12,18 @@ import { addEmbeddings } from "@/app/utils/addEmbeddings";
 
 const openai = new OpenAI();
 
-// move a lot of this stuff into functions to get my code cleaner
-
 export const POST = async (req: NextRequest) => {
 
-  // parse url to get BOT_TOKEN
-  const token = req.nextUrl.href.match(/([^\/]+)$/)?.[0] as string;
+  const token = req.nextUrl.href.match(/([^\/]+)$/)?.[0] as string; // parse url to get BOT_TOKEN
   const bot = new Bot(token as string);
   bot.use(limit());
 
+  // for managing the state of the chatbot
   let dbUser: users | null;
   let cuserStatus: userStatus;
   let isOwner: boolean;
   const botInfo = await prismadb.bots.findMany({where: {token: token}, select: {id: true, name: true, aboutMe: true}})
   
-  // deny auth here based on users?
   // user.user.username is not required, but id is required hmm...
   async function setStatus(ctx: Context, next: NextFunction) {
     const user = await ctx.getAuthor();
@@ -135,12 +132,11 @@ export const POST = async (req: NextRequest) => {
 
   bot.command("help", async(ctx) => {
     const chatId = ctx.chatId;
-    const userStart = `Type /topics to suggest conversation topics.`
+    const userStart = `Type /topics to suggest conversation topics.\nType /about for information about this bot.`
     bot.api.sendMessage(chatId, userStart)
   })
   
   bot.on("message", async (ctx) => {
-    // await ctx.reply("...");
     const message = ctx.message.text as string;
     const chatId = ctx.chatId;
 
@@ -150,8 +146,12 @@ export const POST = async (req: NextRequest) => {
       return
     }
 
-    // use AI to ask a follow up question
-    if (cuserStatus.status==="question") {
+    if (cuserStatus.status==="chat") {
+      const resp = await chatReply(message, botInfo[0].id, botInfo[0].name as string)
+      await bot.api.sendMessage(chatId, resp)
+
+    } else if (cuserStatus.status==="question") {
+      // use AI to ask a follow up question
       const fuQ = await openai.chat.completions.create({
         messages: [{ role: "system", content: "Ask a follow up question to the user's answer. Respond with just the question."},
             {role: "user", content: "Question: " +  cuserStatus.question + "\n " + "Answer: " + message }],
@@ -172,14 +172,11 @@ export const POST = async (req: NextRequest) => {
         await bot.api.sendMessage(chatId, question.question as string)
         await prismadb.answers.create({data: {botId: botInfo[0].id, questionId: cuserStatus.questionId, 
           question: cuserStatus.question, answer: message, skipped: false}})
-
         await addEmbeddings(cuserStatus.questionId, botInfo[0].id) // embed the entire convo id here
-
         await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {questionId: question.id, question: question.question}})
+      } else {
+        await bot.api.sendMessage(chatId, "No further questions")
       }
-    } else if (cuserStatus.status==="chat") {
-      const resp = await chatReply(message, botInfo[0].id, botInfo[0].name as string)
-      await bot.api.sendMessage(chatId, resp)
     }
 
     // switch status out here to avoid weird loops that were happening
@@ -206,7 +203,3 @@ export const POST = async (req: NextRequest) => {
   const handler = webhookCallback(bot, "std/http");
   return handler(req)
 };
-
-// curl https://api.telegram.org/bot<telegram_bot_token>/setWebhook?url=https://<your-deployment.vercel>.app/api/bot
-// [token]/route.ts
-// curl https://api.telegram.org/bot6893250826:AAEdaWjzGzFN8-vrnrTLhJ7DybU--FVGzzs/setWebhook?url=https://tbot-tau.vercel.app/api/bot/6893250826:AAEdaWjzGzFN8-vrnrTLhJ7DybU--FVGzzs
