@@ -4,110 +4,15 @@ import { limit } from "@grammyjs/ratelimiter";
 import prismadb from "@/lib/prismadb";
 import { userStatus, users } from "@prisma/client";
 import { NextRequest } from "next/server";
-import { createClient } from '@supabase/supabase-js'
-import { SupabaseFilter, SupabaseVectorStore } from "@langchain/community/vectorstores/supabase";
-import { OpenAIEmbeddings, ChatOpenAI } from "@langchain/openai";
-import type { Document } from "@langchain/core/documents";
-import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { StringOutputParser } from "@langchain/core/output_parsers";
-import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
+
+import { chatReply } from "@/app/utils/chatReply";
 import { suggestTopics } from "@/app/utils/suggestTopics";
+import { randomQ } from "@/app/utils/randomQ";
+import { addEmbeddings } from "@/app/utils/addEmbeddings";
 
 const openai = new OpenAI();
 
 // move a lot of this stuff into functions to get my code cleaner
-
-// select 3 random answers from documents and summarize them as bullet points
-
-async function chatReply (message: string, botId: number, botName: string) {
-  const client = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, 
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string)
-  const embeddings = new OpenAIEmbeddings({model: "text-embedding-3-small"});
-  const vectorStore = new SupabaseVectorStore(embeddings, 
-    {client, tableName: "documents", queryName: "match_documents",});
-  const retriever = vectorStore.asRetriever({filter: (rpc: SupabaseFilter) => 
-    rpc.filter("metadata->>botId", "eq", botId), k: 3});
-
-  // add chat history
-  const prompt = ChatPromptTemplate.fromTemplate(
-    `You are answering questions on behalf of {name}.
-    Answer in the first person using the context available. 
-    If the answer is not available in the context don't make up an answer just reply: I don't know.
-    Context\n{context}\n Question:\n{question}`
-  );
-
-  const llm = new ChatOpenAI({ model: "gpt-4o-mini", temperature: 0 });
-  const retrievedDocs = await retriever.invoke(message);
-
-  const ragChain = await createStuffDocumentsChain({
-    llm, prompt, outputParser: new StringOutputParser(),
-  });
-
-  const resp = await ragChain.invoke({
-    name: botName, question: message, context: retrievedDocs,
-  });
-
-  return resp
-}
-
-async function randomQ(answeredQs: {questionId: number | null}[], cuserStatus: userStatus | null) {
-
-  let excludeQs: number[] = [];
-  if (answeredQs!==null) {
-    excludeQs = answeredQs.map(item => item.questionId).filter((id): id is number => id !== null);
-  }
-
-  let userQLevel: number = 0;
-  if (cuserStatus!==null) {
-    userQLevel = cuserStatus.questionLevel as number
-  }
-
-  let count = await prismadb.basedQuestions.count({where: {questionLevel: userQLevel, id: {notIn: excludeQs}}});
-
-  // if all questions have been answered or skipped, advance level
-  if (count===0) {
-    if (cuserStatus!==null) {
-      if (cuserStatus.questionLevel as number < 5) {
-        await prismadb.userStatus.update({ where: {id: cuserStatus.id}, data: {questionLevel: cuserStatus.questionLevel as number + 1} })
-      }
-      userQLevel = cuserStatus.questionLevel as number
-      count = await prismadb.basedQuestions.count({where: {questionLevel: userQLevel, id: {notIn: excludeQs}}})
-    }
-  }
-
-  const randomOffset = Math.floor(Math.random() * count);
-  const question = await prismadb.basedQuestions.findFirst({ 
-    where: {questionLevel: userQLevel, id: {notIn: excludeQs}}, skip: randomOffset})
-
-  return question
-}
-
-async function addEmbeddings (questionId: number, botId: number) {
-
-  const qanda = await prismadb.answers.findMany({where: {questionId: questionId, skipped: false}, 
-    select: {question: true, answer: true}})
-
-  // temporary solution, it should really handle a qanda of arbitrary length
-  let convo: string;
-  if (qanda.length===1) {
-    convo = qanda[0].question as string + " " + qanda[0].answer
-  } else {
-    convo = qanda[0].question as string + " " + qanda[0].answer + " " + qanda[1].question + " " + qanda[1].answer
-  }
-
-  const client = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, 
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string)
-
-  const embeddings = new OpenAIEmbeddings({model: "text-embedding-3-small",});
-  const vectorStore = new SupabaseVectorStore(embeddings, {
-    client: client, tableName: "documents", queryName: "match_documents",
-  });
-
-  const doc1: Document = {pageContent: convo, metadata: {botId: botId, questionId: questionId}}
-  const newIds = await vectorStore.addDocuments([doc1]);
-
-  await prismadb.documents.update({where: {id: Number(newIds[0])}, data: {botId: botId, questionId: questionId}})
-}
 
 export const POST = async (req: NextRequest) => {
 
