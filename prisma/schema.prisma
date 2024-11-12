@@ -61,7 +61,7 @@ model documents {
   id         BigInt                @id @default(autoincrement())
   content    String
   embedding  Unsupported("vector")
-  botId      Int
-  questionId Int
+  botId      Int?
+  questionId Int?
   metadata   Json
 }
