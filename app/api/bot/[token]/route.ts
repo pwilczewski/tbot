@@ -86,9 +86,9 @@ export const POST = async (req: NextRequest) => {
       const answeredQs = await prismadb.answers.findMany({ where: {botId: botInfo[0].id} , 
         select: {questionId: true}, distinct: ['questionId']});
       const question = await randomQ(answeredQs, trainingStatus[0]);
-      console.log(question)
   
       if (question !== null) {
+        await prismadb.userStatus.update({ where: {id: cuserStatus.id}, data: {status: "train"} })
         await prismadb.trainingStatus.update({where: {id: trainingStatus[0].id}, 
           data: {status: "question", question: question.question as string, questionId: question.id}})
         await bot.api.sendMessage(chatId, question.question as string)
@@ -98,9 +98,8 @@ export const POST = async (req: NextRequest) => {
 
   bot.command("skip", async (ctx) => {
     const chatId = ctx.chatId;
-    if (cuserStatus.status!=="chat") {
+    if (cuserStatus.status==="train") {
       const trainingStatus = await prismadb.trainingStatus.findMany({where: {botId: botInfo[0].id}})
-      console.log(trainingStatus)
       await bot.api.sendMessage(chatId, "Retrieving new question")
       await prismadb.answers.create({ data: {botId: botInfo[0].id, questionId: trainingStatus[0].questionId, 
         question: trainingStatus[0].question, skipped: true }})
@@ -109,7 +108,7 @@ export const POST = async (req: NextRequest) => {
       const question = await randomQ(answeredQs, trainingStatus[0]);
 
       if (question !== null) {
-        if (cuserStatus.status==="followup") {
+        if (trainingStatus[0].status==="followup") {
           await addEmbeddings(trainingStatus[0].questionId, botInfo[0].id)
         }
         await prismadb.trainingStatus.update({where: {id: trainingStatus[0].id}, 
