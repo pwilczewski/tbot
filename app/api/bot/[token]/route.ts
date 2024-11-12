@@ -9,6 +9,7 @@ import { chatReply } from "@/app/utils/chatReply";
 import { suggestTopics } from "@/app/utils/suggestTopics";
 import { randomQ } from "@/app/utils/randomQ";
 import { addEmbeddings } from "@/app/utils/addEmbeddings";
+import { trainReply } from "@/app/utils/trainReply";
 
 const openai = new OpenAI();
 
@@ -148,42 +149,11 @@ export const POST = async (req: NextRequest) => {
 
     if (cuserStatus.status==="chat") {
       const resp = await chatReply(message, botInfo[0].id, botInfo[0].name as string)
-      await bot.api.sendMessage(chatId, resp)
+      await bot.api.sendMessage(chatId, resp);
 
-    } else if (cuserStatus.status==="question") {
-      // use AI to ask a follow up question
-      const fuQ = await openai.chat.completions.create({
-        messages: [{ role: "system", content: "Ask a follow up question to the user's answer. Respond with just the question."},
-            {role: "user", content: "Question: " +  cuserStatus.question + "\n " + "Answer: " + message }],
-        model: 'gpt-4o-mini', })
-      const resp = fuQ.choices[0].message.content as string
-      await bot.api.sendMessage(chatId, resp)
-
-      await prismadb.answers.create({data: {botId: botInfo[0].id, questionId: cuserStatus.questionId, 
-        question: cuserStatus.question, answer: message, skipped: false}})
-      await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {question: resp}})
-
-    } else if (cuserStatus.status==="followup") {
-      const answeredQs = await prismadb.answers.findMany({ where: {botId: botInfo[0].id} , 
-        select: {questionId: true}, distinct: ['questionId']})
-      const question = await randomQ(answeredQs, cuserStatus);
-
-      if (question!==null) {
-        await bot.api.sendMessage(chatId, question.question as string)
-        await prismadb.answers.create({data: {botId: botInfo[0].id, questionId: cuserStatus.questionId, 
-          question: cuserStatus.question, answer: message, skipped: false}})
-        await addEmbeddings(cuserStatus.questionId, botInfo[0].id) // embed the entire convo id here
-        await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {questionId: question.id, question: question.question}})
-      } else {
-        await bot.api.sendMessage(chatId, "No further questions")
-      }
-    }
-
-    // switch status out here to avoid weird loops that were happening
-    if (cuserStatus.status==="followup") {
-      await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {status: "question"}})
-    } else if (cuserStatus.status==="question") {
-      await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {status: "followup"}})
+    } else {
+      await trainReply(message, cuserStatus, openai, chatId, bot, botInfo[0].id)
+      // await bot.api.sendMessage(chatId, resp);
     }
   });
 
