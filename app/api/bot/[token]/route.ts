@@ -17,14 +17,14 @@ const openai = new OpenAI();
 export const POST = async (req: NextRequest) => {
 
   // parse url to get BOT_TOKEN
-  const token = req.nextUrl.href.match(/([^\/]+)$/)?.[0];
+  const token = req.nextUrl.href.match(/([^\/]+)$/)?.[0] as string;
   const bot = new Bot(token as string);
-  let dbUser: users | null;
-  let cuserStatus: userStatus | null;
-  let isOwner: boolean | null;
-  const botInfo = await prismadb.bots.findMany({where: {token: token}, select: {id: true, name: true, aboutMe: true}})
-  
   bot.use(limit());
+
+  let dbUser: users | null;
+  let cuserStatus: userStatus;
+  let isOwner: boolean;
+  const botInfo = await prismadb.bots.findMany({where: {token: token}, select: {id: true, name: true, aboutMe: true}})
   
   // deny auth here based on users?
   // user.user.username is not required, but id is required hmm...
@@ -37,19 +37,18 @@ export const POST = async (req: NextRequest) => {
 
     // if user does not exist, create user and initialize status
     if (dbUser===null) {
-      await prismadb.users.create({data: {userName: user.user.username, telegramId: user.user.id}})
+      await prismadb.users.create({data: {userName: user.user.username as string, telegramId: user.user.id}})
       dbUser = await prismadb.users.findFirst({ where: {userName: user.user.username} })
-      cuserStatus = await prismadb.userStatus.create({data: {status: "start", userName: user.user.username, 
-        botId: token, isOwner: isOwner, question: "", questionId: null
+      cuserStatus = await prismadb.userStatus.create({data: {status: "start", userName: user.user.username as string, 
+        botId: token, isOwner: isOwner, question: "", questionId: 0, questionLevel: 1
       }})
     } else {
       cuserStatus = await prismadb.userStatus.findFirst({
-        where: {userName: user.user.username, botId: token}})
+        where: {userName: user.user.username, botId: token}}) as userStatus
     }
 
     await next();
   }
-  
   bot.use(setStatus);
 
   bot.command("start", 
@@ -57,8 +56,7 @@ export const POST = async (req: NextRequest) => {
       const chatId = ctx.chatId;
 
       const userStart = `Welcome to` + botInfo[0].name + `'s bot. I've been trained to chat on behalf of` + botInfo[0].name + `. You can use the /topics command to suggest conversation topics.`
-
-        const ownerStart = `Welcome to your bot. You are currently in chat model. You can use the /train command to switch to training mode.`
+      const ownerStart = `Welcome to your bot. You are currently in chat model. You can use the /train command to switch to training mode.`
 
       if ( isOwner===false ) {
         await bot.api.sendMessage(chatId, userStart)
@@ -68,19 +66,15 @@ export const POST = async (req: NextRequest) => {
       }
   });
 
-  // switch to chat status, user is always in chat status
   bot.command("chat", async (ctx) => {
     const chatId = ctx.chatId;
     await bot.api.sendMessage(chatId, "Chat mode enabled")
-    if (cuserStatus!==null) {
-      // should I clear questions here?
-      await prismadb.userStatus.update({ where: {id: cuserStatus.id}, data: {status: "chat"} })
-    }
+    await prismadb.userStatus.update({ where: {id: cuserStatus.id}, data: {status: "chat"} })
   });
 
   bot.command("topics", async (ctx) => {
     const chatId = ctx.chatId;
-    if (cuserStatus!==null && cuserStatus.status==="chat") {
+    if (cuserStatus.status==="chat") {
       const topics = await suggestTopics(botInfo[0].id, openai);
       await bot.api.sendMessage(chatId, "Here are some topics you might want to ask about:\n" + topics);
     }
@@ -98,10 +92,8 @@ export const POST = async (req: NextRequest) => {
       const question = await randomQ(answeredQs, cuserStatus);
   
       if (question !== null) {
-        if (cuserStatus!==null) {
-          await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
-            data: {status: "question", question: question.question as string, questionId: question.id}})
-        }
+        await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
+          data: {status: "question", question: question.question as string, questionId: question.id}})
         await bot.api.sendMessage(chatId, question.question as string)
       }
     }
@@ -109,7 +101,7 @@ export const POST = async (req: NextRequest) => {
 
   bot.command("skip", async (ctx) => {
     const chatId = ctx.chatId;
-    if (cuserStatus!==null && cuserStatus.status!=="chat") {
+    if (cuserStatus.status!=="chat") {
       await bot.api.sendMessage(chatId, "Retrieving new question")
       await prismadb.answers.create({ data: {botId: botInfo[0].id, questionId: cuserStatus.questionId, 
         question: cuserStatus.question, skipped: true }})
@@ -118,13 +110,11 @@ export const POST = async (req: NextRequest) => {
       const question = await randomQ(answeredQs, cuserStatus);
 
       if (question !== null) {
-        if (cuserStatus!==null) {
-          if (cuserStatus.status==="followup" && cuserStatus.questionId!==null) {
-            await addEmbeddings(cuserStatus.questionId, botInfo[0].id)
-          }
-          await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
-            data: {status: "question", question: question.question as string, questionId: question.id}})
+        if (cuserStatus.status==="followup") {
+          await addEmbeddings(cuserStatus.questionId, botInfo[0].id)
         }
+        await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
+          data: {status: "question", question: question.question as string, questionId: question.id}})
         await bot.api.sendMessage(chatId, question.question as string)
       } else {
         await bot.api.sendMessage(chatId, "No further questions")
@@ -146,7 +136,6 @@ export const POST = async (req: NextRequest) => {
   bot.command("help", async(ctx) => {
     const chatId = ctx.chatId;
     const userStart = `Type /topics to suggest conversation topics.`
-    
     bot.api.sendMessage(chatId, userStart)
   })
   
@@ -161,47 +150,43 @@ export const POST = async (req: NextRequest) => {
       return
     }
 
-    if (cuserStatus!==null) {
-      // use AI to ask a follow up question
-      if (cuserStatus.status==="question") {
-        const fuQ = await openai.chat.completions.create({
-          messages: [{ role: "system", content: "Ask a follow up question to the user's answer. Respond with just the question."},
-              {role: "user", content: "Question: " +  cuserStatus.question + "\n " + "Answer: " + message }],
-          model: 'gpt-4o-mini', })
-        const resp = fuQ.choices[0].message.content as string
-        await bot.api.sendMessage(chatId, resp)
+    // use AI to ask a follow up question
+    if (cuserStatus.status==="question") {
+      const fuQ = await openai.chat.completions.create({
+        messages: [{ role: "system", content: "Ask a follow up question to the user's answer. Respond with just the question."},
+            {role: "user", content: "Question: " +  cuserStatus.question + "\n " + "Answer: " + message }],
+        model: 'gpt-4o-mini', })
+      const resp = fuQ.choices[0].message.content as string
+      await bot.api.sendMessage(chatId, resp)
 
+      await prismadb.answers.create({data: {botId: botInfo[0].id, questionId: cuserStatus.questionId, 
+        question: cuserStatus.question, answer: message, skipped: false}})
+      await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {question: resp}})
+
+    } else if (cuserStatus.status==="followup") {
+      const answeredQs = await prismadb.answers.findMany({ where: {botId: botInfo[0].id} , 
+        select: {questionId: true}, distinct: ['questionId']})
+      const question = await randomQ(answeredQs, cuserStatus);
+
+      if (question!==null) {
+        await bot.api.sendMessage(chatId, question.question as string)
         await prismadb.answers.create({data: {botId: botInfo[0].id, questionId: cuserStatus.questionId, 
           question: cuserStatus.question, answer: message, skipped: false}})
-        await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {question: resp}})
 
-      } else if (cuserStatus.status==="followup") {
-        const answeredQs = await prismadb.answers.findMany({ where: {botId: botInfo[0].id} , 
-          select: {questionId: true}, distinct: ['questionId']})
-        const question = await randomQ(answeredQs, cuserStatus);
+        await addEmbeddings(cuserStatus.questionId, botInfo[0].id) // embed the entire convo id here
 
-        if (question!==null) {
-          await bot.api.sendMessage(chatId, question.question as string)
-          await prismadb.answers.create({data: {botId: botInfo[0].id, questionId: cuserStatus.questionId, 
-            question: cuserStatus.question, answer: message, skipped: false}})
-
-          if (cuserStatus.questionId!==null) {
-            await addEmbeddings(cuserStatus.questionId, botInfo[0].id) // embed the entire convo id here
-          }
-
-          await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {questionId: question.id, question: question.question}})
-        }
-      } else if (cuserStatus.status==="chat") {
-        const resp = await chatReply(message, botInfo[0].id, botInfo[0].name as string)
-        await bot.api.sendMessage(chatId, resp)
+        await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {questionId: question.id, question: question.question}})
       }
+    } else if (cuserStatus.status==="chat") {
+      const resp = await chatReply(message, botInfo[0].id, botInfo[0].name as string)
+      await bot.api.sendMessage(chatId, resp)
+    }
 
-      // switch status out here to avoid weird loops that were happening
-      if (cuserStatus.status==="followup") {
-        await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {status: "question"}})
-      } else if (cuserStatus.status==="question") {
-        await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {status: "followup"}})
-      }
+    // switch status out here to avoid weird loops that were happening
+    if (cuserStatus.status==="followup") {
+      await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {status: "question"}})
+    } else if (cuserStatus.status==="question") {
+      await prismadb.userStatus.update({where: {id: cuserStatus.id}, data: {status: "followup"}})
     }
   });
 
