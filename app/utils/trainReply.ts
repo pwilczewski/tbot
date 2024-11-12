@@ -5,10 +5,10 @@ import OpenAI from 'openai';
 import { randomQ } from "./randomQ";
 import { addEmbeddings } from "./addEmbeddings";
 ``
-export async function trainReply(message: string, trainingStatus: trainingStatus, 
-    chatId: number, bot: Bot, botId: number) {
+export async function trainReply(message: string, trainingStatus: trainingStatus, botId: number) {
 
     const openai = new OpenAI();
+    let resp: string = ``;
 
     if (trainingStatus.status==="question") {
         // use AI to ask a follow up question
@@ -16,8 +16,8 @@ export async function trainReply(message: string, trainingStatus: trainingStatus
             messages: [{ role: "system", content: "Ask a follow up question to the user's answer. Respond with just the question."},
                 {role: "user", content: "Question: " +  trainingStatus.question + "\n " + "Answer: " + message }],
             model: 'gpt-4o-mini', })
-        const resp = fuQ.choices[0].message.content as string
-        await bot.api.sendMessage(chatId, resp)
+        resp = fuQ.choices[0].message.content as string
+        // await bot.api.sendMessage(chatId, resp)
 
         await prismadb.answers.create({data: {botId: botId, questionId: trainingStatus.questionId, 
             question: trainingStatus.question, answer: message, skipped: false}})
@@ -29,13 +29,15 @@ export async function trainReply(message: string, trainingStatus: trainingStatus
         const question = await randomQ(answeredQs, trainingStatus);
 
         if (question!==null) {
-            await bot.api.sendMessage(chatId, question.question as string)
+            // await bot.api.sendMessage(chatId, question.question as string)
+            resp = question.question as string
             await prismadb.answers.create({data: {botId: botId, questionId: trainingStatus.questionId, 
                 question: trainingStatus.question, answer: message, skipped: false}})
             await addEmbeddings(trainingStatus.questionId, botId) // embed the entire convo id here
             await prismadb.trainingStatus.update({where: {id: trainingStatus.id}, data: {questionId: question.id, question: question.question}})
         } else {
-        await bot.api.sendMessage(chatId, "No further questions")
+            // await bot.api.sendMessage(chatId, "No further questions")
+            resp = "No further questions"
         }
     }
 
@@ -45,4 +47,6 @@ export async function trainReply(message: string, trainingStatus: trainingStatus
     } else if (trainingStatus.status==="question") {
         await prismadb.trainingStatus.update({where: {id: trainingStatus.id}, data: {status: "followup"}})
     }
+
+    return resp;
 }

@@ -1,4 +1,4 @@
-import { Bot, Context, GrammyError, HttpError, NextFunction, webhookCallback } from "grammy";
+import { Bot, Context, GrammyError, HttpError, NextFunction, session, SessionFlavor, webhookCallback } from "grammy";
 import { limit } from "@grammyjs/ratelimiter";
 import prismadb from "@/lib/prismadb";
 import { userStatus } from "@prisma/client";
@@ -10,10 +10,16 @@ import { randomQ } from "@/app/utils/randomQ";
 import { addEmbeddings } from "@/app/utils/addEmbeddings";
 import { trainReply } from "@/app/utils/trainReply";
 
+interface SessionData {
+  conversationHistory: string[];
+}
+
 export const POST = async (req: NextRequest) => {
 
   const token = req.nextUrl.href.match(/([^\/]+)$/)?.[0] as string; // parse url to get BOT_TOKEN
-  const bot = new Bot(token as string);
+
+  type MyContext = Context & SessionFlavor<SessionData>;
+  const bot = new Bot<MyContext>(token as string);
   const botInfo = await prismadb.bots.findMany({where: {token: token}, select: {id: true, name: true, aboutMe: true}})
   bot.use(limit());
 
@@ -29,10 +35,11 @@ export const POST = async (req: NextRequest) => {
     const checkOwner = await prismadb.bots.findFirst({ where: {token: token, owner: user.user.username} })
 
     // if user does not exist, create user and initialize status
+    // not yet allowing users to create their own bots
     if (dbUser===null) {
       await prismadb.users.create({data: {userName: user.user.username as string, telegramId: user.user.id}})
       cuserStatus = await prismadb.userStatus.create({data: {status: "start", userName: user.user.username as string, 
-        botId: botInfo[0].id, isOwner: checkOwner!==null
+        botId: botInfo[0].id, isOwner: false
       }})
     } else {
       cuserStatus = await prismadb.userStatus.findFirst({
@@ -42,6 +49,28 @@ export const POST = async (req: NextRequest) => {
     await next();
   };
   bot.use(setStatus);
+
+  bot.use(session({
+    initial: (): SessionData => ({
+      conversationHistory: [],
+    }),
+  }));
+
+  bot.use(async (ctx, next) => {
+    if (ctx.message?.text) {
+      ctx.session.conversationHistory.push(ctx.message.text);
+    }
+    await next();
+  });
+
+  bot.command('history', async (ctx) => {
+    const history = ctx.session.conversationHistory.join('\n');
+    await ctx.reply(
+      history.length > 0 
+        ? `Your conversation history:\n${history}`
+        : 'No conversation history yet.'
+    );
+  });
 
   bot.command("start", 
     async (ctx) => {
@@ -153,7 +182,8 @@ export const POST = async (req: NextRequest) => {
       await bot.api.sendMessage(chatId, resp);
     } else {
       const trainingStatus = await prismadb.trainingStatus.findMany({ where: {botId: botInfo[0].id} })
-      await trainReply(message, trainingStatus[0], chatId, bot, botInfo[0].id)
+      const resp = await trainReply(message, trainingStatus[0], chatId)
+      await bot.api.sendMessage(chatId, resp);
     }
   });
 
