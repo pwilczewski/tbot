@@ -17,15 +17,13 @@ model basedQuestions {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model userStatus {
-  created_at    DateTime @default(now()) @db.Timestamptz(6)
-  userName      String
-  isOwner       Boolean
-  status        String
-  botId         String
-  questionId    Int
-  id            BigInt   @id @default(autoincrement())
-  question      String
-  questionLevel Int
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  userName   String
+  isOwner    Boolean
+  status     String
+  id         BigInt   @id @default(autoincrement())
+  botId      Int?
+  userId     BigInt?
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -64,4 +62,15 @@ model documents {
   botId      Int?
   questionId Int?
   metadata   Json
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model trainingStatus {
+  id            Int      @id @default(autoincrement())
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  botId         Int
+  questionId    Int
+  questionLevel Int
+  status        String
+  question      String
 }

@@ -1,7 +1,7 @@
 import { Bot, Context, GrammyError, HttpError, NextFunction, webhookCallback } from "grammy";
 import { limit } from "@grammyjs/ratelimiter";
 import prismadb from "@/lib/prismadb";
-import { userStatus, users } from "@prisma/client";
+import { userStatus } from "@prisma/client";
 import { NextRequest } from "next/server";
 
 import { chatReply } from "@/app/utils/chatReply";
@@ -14,30 +14,29 @@ export const POST = async (req: NextRequest) => {
 
   const token = req.nextUrl.href.match(/([^\/]+)$/)?.[0] as string; // parse url to get BOT_TOKEN
   const bot = new Bot(token as string);
+  const botInfo = await prismadb.bots.findMany({where: {token: token}, select: {id: true, name: true, aboutMe: true}})
   bot.use(limit());
 
   // for managing the state of the chatbot
-  let dbUser: users | null;
   let cuserStatus: userStatus;
-  const botInfo = await prismadb.bots.findMany({where: {token: token}, select: {id: true, name: true, aboutMe: true}})
-  
+
   // user.user.username is not required, but id is required hmm...
   async function setStatus(ctx: Context, next: NextFunction) {
     const user = await ctx.getAuthor();
-    dbUser = await prismadb.users.findFirst({where: {userName: user.user.username}})
-
+    console.log(user.user.id)
+    // am I just using it for auth?
+    const dbUser = await prismadb.users.findFirst({where: {userName: user.user.username}})
     const checkOwner = await prismadb.bots.findFirst({ where: {token: token, owner: user.user.username} })
 
     // if user does not exist, create user and initialize status
     if (dbUser===null) {
       await prismadb.users.create({data: {userName: user.user.username as string, telegramId: user.user.id}})
-      dbUser = await prismadb.users.findFirst({ where: {userName: user.user.username} })
       cuserStatus = await prismadb.userStatus.create({data: {status: "start", userName: user.user.username as string, 
-        botId: token, isOwner: checkOwner!==null, question: "", questionId: 0, questionLevel: 1
+        botId: botInfo[0].id, isOwner: checkOwner!==null
       }})
     } else {
       cuserStatus = await prismadb.userStatus.findFirst({
-        where: {userName: user.user.username, botId: token}}) as userStatus
+        where: {userName: user.user.username, botId: botInfo[0].id}}) as userStatus
     }
 
     await next();
@@ -47,8 +46,9 @@ export const POST = async (req: NextRequest) => {
   bot.command("start", 
     async (ctx) => {
       const chatId = ctx.chatId;
+      const botName = botInfo[0].name
 
-      const userStart = `Welcome to` + botInfo[0].name + `'s bot. I've been trained to chat on behalf of` + botInfo[0].name + `. You can use the /topics command to suggest conversation topics.`
+      const userStart = `Welcome to` + botName + `'s bot. I've been trained to chat on behalf of` + botName + `.\nYou can use the /topics command to suggest conversation topics.`
       const ownerStart = `Welcome to your bot. You are currently in chat model. You can use the /train command to switch to training mode.`
 
       if ( cuserStatus.isOwner===false ) {
@@ -67,6 +67,7 @@ export const POST = async (req: NextRequest) => {
 
   bot.command("topics", async (ctx) => {
     const chatId = ctx.chatId;
+
     if (cuserStatus.status==="chat") {
       const topics = await suggestTopics(botInfo[0].id);
       await bot.api.sendMessage(chatId, "Here are some topics you might want to ask about:\n" + topics);
@@ -75,17 +76,19 @@ export const POST = async (req: NextRequest) => {
   
   bot.command("train", async (ctx) => {
     const chatId = ctx.chatId;
+    // get and update the training status here
 
     if (cuserStatus.isOwner===false) {
       await bot.api.sendMessage(chatId, "Only the bot's owner can train")
     } else {
+      const trainingStatus = await prismadb.trainingStatus.findMany({ where: {botId: botInfo[0].id} })
       await bot.api.sendMessage(chatId, "Training mode enabled")
       const answeredQs = await prismadb.answers.findMany({ where: {botId: botInfo[0].id} , 
-        select: {questionId: true}, distinct: ['questionId']})      
-      const question = await randomQ(answeredQs, cuserStatus);
+        select: {questionId: true}, distinct: ['questionId']});
+      const question = await randomQ(answeredQs, trainingStatus[0]);
   
       if (question !== null) {
-        await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
+        await prismadb.trainingStatus.update({where: {id: trainingStatus[0].id}, 
           data: {status: "question", question: question.question as string, questionId: question.id}})
         await bot.api.sendMessage(chatId, question.question as string)
       }
@@ -95,18 +98,20 @@ export const POST = async (req: NextRequest) => {
   bot.command("skip", async (ctx) => {
     const chatId = ctx.chatId;
     if (cuserStatus.status!=="chat") {
+      const trainingStatus = await prismadb.trainingStatus.findMany({
+        where: {botId: botInfo[0].id}})
       await bot.api.sendMessage(chatId, "Retrieving new question")
-      await prismadb.answers.create({ data: {botId: botInfo[0].id, questionId: cuserStatus.questionId, 
-        question: cuserStatus.question, skipped: true }})
+      await prismadb.answers.create({ data: {botId: botInfo[0].id, questionId: trainingStatus[0].questionId, 
+        question: trainingStatus[0].question, skipped: true }})
       const answeredQs = await prismadb.answers.findMany({ where: {botId: botInfo[0].id} , 
         select: {questionId: true}, distinct: ['questionId']})
-      const question = await randomQ(answeredQs, cuserStatus);
+      const question = await randomQ(answeredQs, trainingStatus[0]);
 
       if (question !== null) {
         if (cuserStatus.status==="followup") {
-          await addEmbeddings(cuserStatus.questionId, botInfo[0].id)
+          await addEmbeddings(trainingStatus[0].questionId, botInfo[0].id)
         }
-        await prismadb.userStatus.update({where: {id: cuserStatus.id}, 
+        await prismadb.trainingStatus.update({where: {id: trainingStatus[0].id}, 
           data: {status: "question", question: question.question as string, questionId: question.id}})
         await bot.api.sendMessage(chatId, question.question as string)
       } else {
@@ -118,8 +123,9 @@ export const POST = async (req: NextRequest) => {
   bot.command("about", async(ctx) => {
     const chatId = ctx.chatId;
     const aboutMe = botInfo[0].aboutMe;
+
     if (aboutMe!==null) {
-      bot.api.sendMessage(chatId, `A message from my creator... \n\n` + botInfo[0].aboutMe);
+      bot.api.sendMessage(chatId, `A message from my creator... \n\n` + aboutMe);
     } else {
       bot.api.sendMessage(chatId, `My creator has nothing to say here.`);
     }
@@ -143,11 +149,11 @@ export const POST = async (req: NextRequest) => {
     }
 
     if (cuserStatus.status==="chat") {
-      // chat reply can send the message?
       const resp = await chatReply(message, botInfo[0].id, botInfo[0].name as string)
       await bot.api.sendMessage(chatId, resp);
     } else {
-      await trainReply(message, cuserStatus, chatId, bot, botInfo[0].id)
+      const trainingStatus = await prismadb.trainingStatus.findMany({ where: {botId: botInfo[0].id} })
+      await trainReply(message, trainingStatus[0], chatId, bot, botInfo[0].id)
     }
   });
 

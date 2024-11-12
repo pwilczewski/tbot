@@ -4,9 +4,9 @@ import OpenAI from 'openai';
 export async function suggestTopics(botId: number) {
 
     const openai = new OpenAI();
-
     const sugTopics = await prismadb.documents.findMany({where: {botId: botId}, select: {content: true}})
     const randTopics = sugTopics.sort(() => Math.random() - 0.5).slice(0,3);
+
     if (randTopics.length >= 3) {
       const qaPairs = randTopics[0].content + " \n" + randTopics[1].content + " \n" + randTopics[2].content
   
