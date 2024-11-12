@@ -86,6 +86,7 @@ export const POST = async (req: NextRequest) => {
       const answeredQs = await prismadb.answers.findMany({ where: {botId: botInfo[0].id} , 
         select: {questionId: true}, distinct: ['questionId']});
       const question = await randomQ(answeredQs, trainingStatus[0]);
+      console.log(question)
   
       if (question !== null) {
         await prismadb.trainingStatus.update({where: {id: trainingStatus[0].id}, 
