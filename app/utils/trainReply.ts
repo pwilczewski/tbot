@@ -5,8 +5,9 @@ import OpenAI from 'openai';
 import { randomQ } from "./randomQ";
 import { addEmbeddings } from "./addEmbeddings";
 
-export async function trainReply(message: string, cuserStatus: userStatus, 
-    openai: OpenAI, chatId: number, bot: Bot, botId: number) {
+export async function trainReply(message: string, cuserStatus: userStatus, chatId: number, bot: Bot, botId: number) {
+
+    const openai = new OpenAI();
 
     if (cuserStatus.status==="question") {
         // use AI to ask a follow up question
