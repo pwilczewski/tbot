@@ -56,12 +56,14 @@ export const POST = async (req: NextRequest) => {
     }),
   }));
 
+  /*
   bot.use(async (ctx, next) => {
     if (ctx.message?.text) {
       ctx.session.conversationHistory.push(ctx.message.text);
     }
     await next();
   });
+  */
 
   bot.command('history', async (ctx) => {
     const history = ctx.session.conversationHistory.join('\n');
@@ -169,6 +171,7 @@ export const POST = async (req: NextRequest) => {
   
   bot.on("message", async (ctx) => {
     const message = ctx.message.text as string;
+    ctx.session.conversationHistory.push(message);
     const chatId = ctx.chatId;
 
     if (message.startsWith('/')) {
