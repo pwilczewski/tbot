@@ -11,7 +11,8 @@ import { addEmbeddings } from "@/app/utils/addEmbeddings";
 import { trainReply } from "@/app/utils/trainReply";
 
 interface SessionData {
-  conversationHistory: string[];
+  // conversationHistory: string[];
+  pizzaCount: number;
 }
 
 export const POST = async (req: NextRequest) => {
@@ -50,11 +51,15 @@ export const POST = async (req: NextRequest) => {
   };
   bot.use(setStatus);
 
-  bot.use(session({
-    initial: (): SessionData => ({
-      conversationHistory: [],
-    }),
-  }));
+  function initial(): SessionData {
+    return { pizzaCount: 0 };
+  }
+  bot.use(session({ initial }));
+  
+  bot.command("hunger", async (ctx) => {
+    const count = ctx.session.pizzaCount;
+    await ctx.reply(`Your hunger level is ${count}!`);
+  });
 
   /*
   bot.use(async (ctx, next) => {
@@ -65,6 +70,7 @@ export const POST = async (req: NextRequest) => {
   });
   */
 
+  /*
   bot.command('history', async (ctx) => {
     const history = ctx.session.conversationHistory.join('\n');
     await ctx.reply(
@@ -73,6 +79,7 @@ export const POST = async (req: NextRequest) => {
         : 'No conversation history yet.'
     );
   });
+  */
 
   bot.command("start", 
     async (ctx) => {
@@ -171,7 +178,7 @@ export const POST = async (req: NextRequest) => {
   
   bot.on("message", async (ctx) => {
     const message = ctx.message.text as string;
-    ctx.session.conversationHistory.push(message);
+    // ctx.session.conversationHistory.push(message);
     const chatId = ctx.chatId;
 
     if (message.startsWith('/')) {
