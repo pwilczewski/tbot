@@ -15,11 +15,12 @@ interface SessionData {
   pizzaCount: number;
 }
 
+type MyContext = Context & SessionFlavor<SessionData>;
+
 export const POST = async (req: NextRequest) => {
 
   const token = req.nextUrl.href.match(/([^\/]+)$/)?.[0] as string; // parse url to get BOT_TOKEN
 
-  type MyContext = Context & SessionFlavor<SessionData>;
   const bot = new Bot<MyContext>(token as string);
   const botInfo = await prismadb.bots.findMany({where: {token: token}, select: {id: true, name: true, aboutMe: true}})
   bot.use(limit());
@@ -102,7 +103,7 @@ export const POST = async (req: NextRequest) => {
 
   bot.command("topics", async (ctx) => {
     const chatId = ctx.chatId;
-    ctx.session.pizzaCount++
+    ctx.session.pizzaCount = ctx.session.pizzaCount + 1;
 
     if (cuserStatus.status==="chat") {
       const topics = await suggestTopics(botInfo[0].id);
