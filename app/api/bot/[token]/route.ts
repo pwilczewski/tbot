@@ -51,15 +51,14 @@ export const POST = async (req: NextRequest) => {
   };
   bot.use(setStatus);
 
-  function initial(): SessionData {
-    return { pizzaCount: 0 };
-  }
-  bot.use(session({ initial }));
+  bot.use(session({ initial: () => ({ pizzaCount: 0 }) }));
   
   bot.command("hunger", async (ctx) => {
     const count = ctx.session.pizzaCount;
     await ctx.reply(`Your hunger level is ${count}!`);
   });
+
+  bot.hears(/.*🍕.*/, (ctx) => ctx.session.pizzaCount++);
 
   /*
   bot.use(async (ctx, next) => {
