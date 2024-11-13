@@ -58,8 +58,6 @@ export const POST = async (req: NextRequest) => {
     await ctx.reply(`Your hunger level is ${count}!`);
   });
 
-  bot.hears(/.*🍕.*/, (ctx) => ctx.session.pizzaCount++);
-
   /*
   bot.use(async (ctx, next) => {
     if (ctx.message?.text) {
@@ -104,6 +102,7 @@ export const POST = async (req: NextRequest) => {
 
   bot.command("topics", async (ctx) => {
     const chatId = ctx.chatId;
+    ctx.session.pizzaCount++
 
     if (cuserStatus.status==="chat") {
       const topics = await suggestTopics(botInfo[0].id);
