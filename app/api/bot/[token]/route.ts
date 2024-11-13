@@ -31,7 +31,7 @@ export const POST = async (req: NextRequest) => {
   // user.user.username is not required, but id is required hmm...
   async function setStatus(ctx: Context, next: NextFunction) {
     const user = await ctx.getAuthor();
-    console.log(user.user.id)
+    // console.log(user.user.id)
     // am I just using it for auth?
     const dbUser = await prismadb.users.findFirst({where: {userName: user.user.username}})
     const checkOwner = await prismadb.bots.findFirst({ where: {token: token, owner: user.user.username} })
@@ -104,6 +104,7 @@ export const POST = async (req: NextRequest) => {
   bot.command("topics", async (ctx) => {
     const chatId = ctx.chatId;
     ctx.session.pizzaCount = ctx.session.pizzaCount + 1;
+    console.log(ctx.session.pizzaCount)
 
     if (cuserStatus.status==="chat") {
       const topics = await suggestTopics(botInfo[0].id);
