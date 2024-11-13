@@ -1,6 +1,5 @@
 import prismadb from "@/lib/prismadb";
 import { trainingStatus } from "@prisma/client";
-import { Bot } from "grammy";
 import OpenAI from 'openai';
 import { randomQ } from "./randomQ";
 import { addEmbeddings } from "./addEmbeddings";
