@@ -1,4 +1,4 @@
-import { Bot, Context, GrammyError, HttpError, NextFunction, session, SessionFlavor, webhookCallback } from "grammy";
+import { Bot, Context, GrammyError, HttpError, NextFunction, webhookCallback } from "grammy";
 import { limit } from "@grammyjs/ratelimiter";
 import prismadb from "@/lib/prismadb";
 import { userStatus } from "@prisma/client";
@@ -10,18 +10,11 @@ import { randomQ } from "@/app/utils/randomQ";
 import { addEmbeddings } from "@/app/utils/addEmbeddings";
 import { trainReply } from "@/app/utils/trainReply";
 
-interface SessionData {
-  // conversationHistory: string[];
-  pizzaCount: number;
-}
-
-type MyContext = Context & SessionFlavor<SessionData>;
-
 export const POST = async (req: NextRequest) => {
 
   const token = req.nextUrl.href.match(/([^\/]+)$/)?.[0] as string; // parse url to get BOT_TOKEN
 
-  const bot = new Bot<MyContext>(token as string);
+  const bot = new Bot(token as string);
   const botInfo = await prismadb.bots.findMany({where: {token: token}, select: {id: true, name: true, aboutMe: true}})
   bot.use(limit());
 
@@ -52,33 +45,6 @@ export const POST = async (req: NextRequest) => {
   };
   bot.use(setStatus);
 
-  bot.use(session({ initial: () => ({ pizzaCount: 0 }) }));
-  
-  bot.command("hunger", async (ctx) => {
-    const count = ctx.session.pizzaCount;
-    await ctx.reply(`Your hunger level is ${count}!`);
-  });
-
-  /*
-  bot.use(async (ctx, next) => {
-    if (ctx.message?.text) {
-      ctx.session.conversationHistory.push(ctx.message.text);
-    }
-    await next();
-  });
-  */
-
-  /*
-  bot.command('history', async (ctx) => {
-    const history = ctx.session.conversationHistory.join('\n');
-    await ctx.reply(
-      history.length > 0 
-        ? `Your conversation history:\n${history}`
-        : 'No conversation history yet.'
-    );
-  });
-  */
-
   bot.command("start", 
     async (ctx) => {
       const chatId = ctx.chatId;
@@ -103,9 +69,6 @@ export const POST = async (req: NextRequest) => {
 
   bot.command("topics", async (ctx) => {
     const chatId = ctx.chatId;
-    ctx.session.pizzaCount = ctx.session.pizzaCount + 1;
-    console.log(ctx.session.pizzaCount)
-
     if (cuserStatus.status==="chat") {
       const topics = await suggestTopics(botInfo[0].id);
       await bot.api.sendMessage(chatId, "Here are some topics you might want to ask about:\n" + topics);
@@ -178,7 +141,6 @@ export const POST = async (req: NextRequest) => {
   
   bot.on("message", async (ctx) => {
     const message = ctx.message.text as string;
-    // ctx.session.conversationHistory.push(message);
     const chatId = ctx.chatId;
 
     if (message.startsWith('/')) {
