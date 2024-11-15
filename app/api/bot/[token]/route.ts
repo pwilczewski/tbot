@@ -67,7 +67,7 @@ export const POST = async (req: NextRequest) => {
   bot.command("topics", async (ctx) => {
     const chatId = ctx.chatId;
     if (cuserStatus.status==="chat") {
-      const topics = await suggestTopics(botInfo[0].id);
+      const topics = await suggestTopics(botInfo[0].id as number);
       await bot.api.sendMessage(chatId, "Here are some topics you might want to ask about:\n" + topics);
     }
   })
@@ -79,7 +79,7 @@ export const POST = async (req: NextRequest) => {
       await bot.api.sendMessage(chatId, "Only the bot's owner can train.")
     } else {
       await bot.api.sendMessage(chatId, "Training mode enabled")
-      const resp = await trainEnable(cuserStatus, botInfo[0].id)
+      const resp = await trainEnable(cuserStatus, botInfo[0].id as number)
       await bot.api.sendMessage(chatId, resp)
     }
   });
@@ -88,7 +88,7 @@ export const POST = async (req: NextRequest) => {
     const chatId = ctx.chatId;
     if (cuserStatus.status==="train") {
       await bot.api.sendMessage(chatId, "Retrieving new question")
-      const resp = await trainSkip(botInfo[0].id);
+      const resp = await trainSkip(botInfo[0].id as number);
       await bot.api.sendMessage(chatId, resp);
     }
   })
@@ -124,7 +124,7 @@ export const POST = async (req: NextRequest) => {
     }
 
     if (cuserStatus.status==="chat") {
-      const resp = await chatReply(message, botInfo[0].id, botInfo[0].name as string)
+      const resp = await chatReply(message, botInfo[0].id as number, botInfo[0].name as string)
       await bot.api.sendMessage(chatId, resp);
     } else {
       const trainingStatus = await prismadb.trainingStatus.findMany({ where: {botId: botInfo[0].id} })
