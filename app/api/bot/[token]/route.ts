@@ -149,5 +149,5 @@ export const POST = async (req: NextRequest) => {
   const handler = webhookCallback(bot, "std/http");
   return handler(req);
   */
-  return;
+  return new Response(null, { status: 200 });
 };
