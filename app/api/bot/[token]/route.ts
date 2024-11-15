@@ -22,6 +22,7 @@ export const POST = async (req: NextRequest) => {
 
   async function setStatus(ctx: Context, next: NextFunction) {
     const user = await ctx.getAuthor();
+    console.log(user)
     const dbUser = await prismadb.users.findFirst({where: {telegramId: user.user.id}}) // just for auth?
     // not yet allowing users to create their own bots
     const checkOwner = await prismadb.bots.findFirst({ where: {token: token, owner: user.user.username} })
@@ -104,7 +105,9 @@ export const POST = async (req: NextRequest) => {
 
   bot.command("help", async(ctx) => {
     const chatId = ctx.chatId;
-    const userStart = `Type /topics to suggest conversation topics.\nType /about for information about this bot.`
+    const userStart = `The following commands are available
+    /about for information about this bot.
+    /topics to suggest conversation topics.`
     bot.api.sendMessage(chatId, userStart)
   })
   
