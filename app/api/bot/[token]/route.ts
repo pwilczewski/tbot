@@ -67,7 +67,7 @@ export const POST = async (req: NextRequest) => {
   bot.command("topics", async (ctx) => {
     const chatId = ctx.chatId;
     if (cuserStatus.status==="chat") {
-      const topics = await suggestTopics(botInfo[0].id as number);
+      const topics = await suggestTopics(botInfo[0].id);
       await bot.api.sendMessage(chatId, "Here are some topics you might want to ask about:\n" + topics);
     }
   })
@@ -79,7 +79,7 @@ export const POST = async (req: NextRequest) => {
       await bot.api.sendMessage(chatId, "Only the bot's owner can train.")
     } else {
       await bot.api.sendMessage(chatId, "Training mode enabled")
-      const resp = await trainEnable(cuserStatus, botInfo[0].id as number)
+      const resp = await trainEnable(cuserStatus, botInfo[0].id)
       await bot.api.sendMessage(chatId, resp)
     }
   });
@@ -88,7 +88,7 @@ export const POST = async (req: NextRequest) => {
     const chatId = ctx.chatId;
     if (cuserStatus.status==="train") {
       await bot.api.sendMessage(chatId, "Retrieving new question")
-      const resp = await trainSkip(botInfo[0].id as number);
+      const resp = await trainSkip(botInfo[0].id);
       await bot.api.sendMessage(chatId, resp);
     }
   })
