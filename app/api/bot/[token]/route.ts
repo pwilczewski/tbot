@@ -107,10 +107,10 @@ export const POST = async (req: NextRequest) => {
 
   bot.command("help", async(ctx) => {
     const chatId = ctx.chatId;
-    const userStart = `The following commands are available
-    /about for information about this bot.
-    /topics to suggest conversation topics.`
-    bot.api.sendMessage(chatId, userStart)
+    const helpful = `The following commands are available:
+  /about for information about this bot.
+  /topics to suggest conversation topics.`
+    bot.api.sendMessage(chatId, helpful)
   })
   
   bot.on("message", async (ctx) => {
