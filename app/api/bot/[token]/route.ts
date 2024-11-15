@@ -128,7 +128,7 @@ export const POST = async (req: NextRequest) => {
       await bot.api.sendMessage(chatId, resp);
     } else {
       const trainingStatus = await prismadb.trainingStatus.findMany({ where: {botId: botInfo[0].id} })
-      const resp = await trainReply(message, trainingStatus[0], chatId)
+      const resp = await trainReply(message, trainingStatus[0], botInfo[0].id as number)
       await bot.api.sendMessage(chatId, resp);
     }
   });
