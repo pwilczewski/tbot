@@ -11,10 +11,9 @@ import { trainEnable, trainSkip } from "@/app/utils/trainEnable";
 
 export const POST = async (req: NextRequest) => {
   
+  /*
   const token = req.nextUrl.href.match(/([^\/]+)$/)?.[0] as string; // parse url to get BOT_TOKEN
-
   const bot = new Bot(token as string);
-
   const botInfo = await prismadb.bots.findMany({where: {token: token}, select: {id: true, name: true, aboutMe: true}})
   bot.use(limit());
 
@@ -148,25 +147,7 @@ export const POST = async (req: NextRequest) => {
   });
 
   const handler = webhookCallback(bot, "std/http");
-
-  try {
-    return await handler(req);
-  } catch (error) {
-    // Error handling
-    console.error("Error while handling update:", error);
-
-    // Check the type of error and log accordingly
-    if (error instanceof GrammyError) {
-        console.error("Grammy Error:", error.description);
-    } else if (error instanceof HttpError) {
-        console.error("HTTP Error:", error);
-    } else {
-        console.error("Unknown Error:", error);
-    }
-
-    // You can return a response indicating an error occurred
-    return new Response("Internal Server Error", { status: 500 });
-  }
-
-  // return handler(req)
+  return handler(req);
+  */
+  return;
 };
