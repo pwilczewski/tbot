@@ -22,16 +22,16 @@ export const POST = async (req: NextRequest) => {
 
   async function setStatus(ctx: Context, next: NextFunction) {
     const user = await ctx.getAuthor();
-    console.log(user)
+    // add username if it's present?
     const dbUser = await prismadb.users.findFirst({where: {telegramId: user.user.id}}) // just for auth?
     // not yet allowing users to create their own bots
-    const checkOwner = await prismadb.bots.findFirst({ where: {token: token, owner: user.user.username} })
+    const checkOwner = await prismadb.bots.findFirst({ where: {token: token, ownerId: user.user.id} })
 
     // if user does not exist, create user and initialize status
     if (dbUser===null) {
-      const newUser = await prismadb.users.create({data: {userName: user.user.username as string, telegramId: user.user.id}})
+      const newUser = await prismadb.users.create({data: {telegramId: user.user.id}})
       cuserStatus = await prismadb.userStatus.create({data: {status: "start", userId: newUser.id, 
-        userName: newUser.userName, botId: botInfo[0].id, isOwner: false}})
+        botId: botInfo[0].id, isOwner: false}})
     } else {
       cuserStatus = await prismadb.userStatus.findFirst({where: {userId: dbUser.id, botId: botInfo[0].id}}) as userStatus
     }
