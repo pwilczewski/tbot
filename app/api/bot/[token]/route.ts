@@ -30,7 +30,7 @@ export const POST = async (req: NextRequest) => {
     // if user does not exist, create user and initialize status
     if (dbUser===null) {
       const newUser = await prismadb.users.create({data: {telegramId: user.user.id}})
-      cuserStatus = await prismadb.userStatus.create({data: {status: "start", userId: newUser.id, 
+      cuserStatus = await prismadb.userStatus.create({data: {status: "chat", userId: newUser.id, 
         botId: botInfo[0].id, isOwner: false}})
     } else {
       cuserStatus = await prismadb.userStatus.findFirst({where: {userId: dbUser.id, botId: botInfo[0].id}}) as userStatus
@@ -45,7 +45,9 @@ export const POST = async (req: NextRequest) => {
       const chatId = ctx.chatId;
       const botName = botInfo[0].name
 
-      const userStart = `Welcome to` + botName + `'s bot. I've been trained to chat on behalf of` + botName + `.\nYou can use the /topics command to suggest conversation topics.`
+      const userStart = `Welcome! I'm a bot trained to chat on behalf of ` + botName + `. The following commands are available
+    /about for information about this bot.
+    /topics to suggest conversation topics.`
       const ownerStart = `Welcome to your bot. You are currently in chat model. You can use the /train command to switch to training mode.`
 
       if ( cuserStatus.isOwner===false ) {
