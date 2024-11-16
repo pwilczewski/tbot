@@ -13,7 +13,7 @@ export async function randomQ(answeredQs: {questionId: number}[], trainingStatus
       if (trainingStatus.questionLevel as number < 5) {
         await prismadb.trainingStatus.update({ where: {id: trainingStatus.id}, data: {questionLevel: trainingStatus.questionLevel as number + 1} })
       }
-      userQLevel = trainingStatus.questionLevel as number
+      userQLevel = trainingStatus.questionLevel as number + 1
       count = await prismadb.basedQuestions.count({where: {questionLevel: userQLevel, id: {notIn: excludeQs}}})
     }
   
