@@ -143,9 +143,10 @@ export const POST = async (req: NextRequest) => {
     } else {
       console.error("Unknown error:", err);
     }
+
+    return new Response(null, { status: 500 });
   });
 
   const handler = webhookCallback(bot, "std/http");
   return handler(req);
-  // return new Response(null, { status: 200 });
 };
