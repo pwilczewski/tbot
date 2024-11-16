@@ -11,7 +11,6 @@ import { trainEnable, trainSkip } from "@/app/utils/trainEnable";
 
 export const POST = async (req: NextRequest) => {
   
-  /*
   const token = req.nextUrl.href.match(/([^\/]+)$/)?.[0] as string; // parse url to get BOT_TOKEN
   const bot = new Bot(token as string);
   const botInfo = await prismadb.bots.findMany({where: {token: token}, select: {id: true, name: true, aboutMe: true}})
@@ -148,6 +147,5 @@ export const POST = async (req: NextRequest) => {
 
   const handler = webhookCallback(bot, "std/http");
   return handler(req);
-  */
-  return new Response(null, { status: 200 });
+  // return new Response(null, { status: 200 });
 };
