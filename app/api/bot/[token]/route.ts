@@ -14,21 +14,21 @@ export const POST = async (req: NextRequest) => {
   const token = req.nextUrl.href.match(/([^\/]+)$/)?.[0] as string; // parse url to get BOT_TOKEN
   const bot = new Bot(token as string);
   const botInfo = await prismadb.bots.findMany({where: {token: token}, select: {id: true, name: true, aboutMe: true}})
-  bot.use(limit());
 
-  // for managing the state of the chatbot
-  let cuserStatus: userStatus;
+  // bot doesn't exist
+  if (botInfo===null) return new Response(null, { status: 500 });
+
+  let cuserStatus: userStatus; // for managing the state of the chatbot
 
   async function setStatus(ctx: Context, next: NextFunction) {
     const user = await ctx.getAuthor();
-    // add username if it's present?
     const dbUser = await prismadb.users.findFirst({where: {telegramId: user.user.id}}) // just for auth?
     // not yet allowing users to create their own bots
     const checkOwner = await prismadb.bots.findFirst({ where: {token: token, ownerId: user.user.id} })
 
     // if user does not exist, create user and initialize status
     if (dbUser===null) {
-      const newUser = await prismadb.users.create({data: {telegramId: user.user.id}})
+      const newUser = await prismadb.users.create({data: {telegramId: user.user.id}}) // user.user.username?
       cuserStatus = await prismadb.userStatus.create({data: {status: "chat", userId: newUser.id, 
         botId: botInfo[0].id, isOwner: false}})
     } else {
@@ -38,6 +38,7 @@ export const POST = async (req: NextRequest) => {
     await next();
   };
   bot.use(setStatus);
+  bot.use(limit()); // for rate limiting
 
   bot.command("start", 
     async (ctx) => {
